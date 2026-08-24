@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Comfortaa } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const comfortaa = Comfortaa({
+  variable: "--font-comfortaa",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -29,9 +26,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${comfortaa.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-100 text-slate-900 font-sans">
+      <body className={`${comfortaa.className} min-h-full flex flex-col bg-slate-100 text-slate-900`}>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
