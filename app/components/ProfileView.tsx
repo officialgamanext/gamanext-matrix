@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import {
   getProjectsForEmployee,
@@ -55,6 +56,7 @@ import {
 
 export default function ProfileView() {
   const { employee, logout, updateCurrentEmployee } = useAuth();
+  const router = useRouter();
 
   const [projects, setProjects] = useState<ProjectAllocation[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
@@ -222,6 +224,25 @@ export default function ProfileView() {
             <span className="font-medium">{employeeEmail}</span>
           </div>
         </div>
+      </div>
+
+      {/* Profile Page Navigation Tabs */}
+      <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-[8px] text-xs font-semibold">
+        <button
+          type="button"
+          className="py-2 px-3 bg-white text-[#0052cc] rounded-[6px] shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer font-bold"
+        >
+          <User className="w-3.5 h-3.5" />
+          <span>Profile Info</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/payroll")}
+          className="py-2 px-3 text-slate-600 hover:text-slate-900 rounded-[6px] transition-colors flex items-center justify-center space-x-1.5 cursor-pointer hover:bg-white/60"
+        >
+          <DollarSign className="w-3.5 h-3.5 text-[#0052cc]" />
+          <span>Payroll & Payslips</span>
+        </button>
       </div>
 
       {/* 2. Personal Information Card (View Only) */}
@@ -442,63 +463,7 @@ export default function ProfileView() {
           : [];
 
         return (
-          <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm">
-                <Receipt className="w-4.5 h-4.5 text-[#0052cc]" />
-                <span>My Payslips ({monthlyPayslips.length})</span>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-[8px] border border-emerald-100">
-                Auto-Generated
-              </span>
-            </div>
-
-            {monthlyPayslips.length === 0 ? (
-              <div className="text-center py-4 text-xs text-slate-400">
-                No payslips available yet.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {monthlyPayslips.map((payslip) => (
-                  <div
-                    key={payslip.id}
-                    className="flex items-center justify-between p-3 bg-slate-50/80 rounded-[8px] border border-slate-100 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center space-x-1.5">
-                        <Receipt className="w-3.5 h-3.5 text-[#0052cc]" />
-                        <span className="font-bold text-xs text-slate-900">{payslip.month}</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-emerald-700 font-mono pl-5 block">
-                        ₹ {payslip.netPay.toLocaleString("en-IN")} Net Salary to Credit
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewPayslip(payslip)}
-                        className="px-2.5 py-1 text-xs font-bold text-[#0052cc] bg-blue-50 hover:bg-blue-100 rounded-[6px] transition-colors cursor-pointer"
-                      >
-                        View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPreviewPayslip(payslip);
-                          setTimeout(() => window.print(), 200);
-                        }}
-                        className="px-2.5 py-1 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-[6px] hover:bg-slate-50 transition-colors flex items-center space-x-1 cursor-pointer"
-                      >
-                        <Download className="w-3 h-3 text-slate-500" />
-                        <span>PDF</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <></>
         );
       })()}
 

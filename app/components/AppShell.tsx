@@ -23,7 +23,7 @@ export default function AppShell({ children }: AppShellProps) {
     activeTab = "reports";
   } else if (pathname.startsWith("/projects")) {
     activeTab = "projects";
-  } else if (pathname.startsWith("/profile")) {
+  } else if (pathname.startsWith("/profile") || pathname.startsWith("/payroll")) {
     activeTab = "profile";
   } else if (pathname.startsWith("/timesheet")) {
     activeTab = "timesheet";
