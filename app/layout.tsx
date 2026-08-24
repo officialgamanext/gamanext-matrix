@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Comfortaa } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 import PwaRegister from "./components/PwaRegister";
 
-const comfortaa = Comfortaa({
-  variable: "--font-comfortaa",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500"],
   display: "swap",
 });
 
@@ -48,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${comfortaa.variable} h-full antialiased`}
+      className={`${poppins.variable} h-full antialiased`}
     >
       <head>
         <link rel="icon" href="/app-icon.png" type="image/png" />
@@ -60,7 +60,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="GamaNext" />
       </head>
-      <body className={`${comfortaa.className} min-h-full flex flex-col bg-slate-100 text-slate-900`}>
+      <body className={`${poppins.className} min-h-full flex flex-col bg-slate-100 text-slate-900`}>
         <PwaRegister />
         <AuthProvider>{children}</AuthProvider>
       </body>
