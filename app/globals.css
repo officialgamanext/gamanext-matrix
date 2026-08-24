@@ -95,3 +95,74 @@ select:disabled,
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+
+/* ========================================================================== */
+/* PRINT & PDF STYLES FOR PAYSLIPS                                            */
+/* ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0 !important;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #printable-payslip,
+  #printable-payslip * {
+    visibility: visible !important;
+  }
+
+  #printable-payslip {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 8mm 12mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: #ffffff !important;
+    box-sizing: border-box !important;
+  }
+
+  #printable-payslip .grid,
+  #printable-payslip .grid-cols-2 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #printable-payslip .flex {
+    display: flex !important;
+  }
+
+  #printable-payslip .flex-row {
+    flex-direction: row !important;
+  }
+
+  #printable-payslip .items-center {
+    align-items: center !important;
+  }
+
+  #printable-payslip .justify-between {
+    justify-content: space-between !important;
+  }
+
+  #printable-payslip tr,
+  #printable-payslip table {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

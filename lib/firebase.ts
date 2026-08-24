@@ -62,6 +62,7 @@ export interface EmployeeData {
   emergencyContact1: EmergencyContact;
   emergencyContact2: EmergencyContact;
   jobType?: string;
+  salaryStructure?: EmployeeSalaryStructure;
   createdAt?: string;
 }
 
@@ -81,6 +82,41 @@ export interface MasterProjectItem {
   id?: string;
   name: string;
   createdAt?: string;
+}
+
+
+export interface SalaryAttribute {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+export interface EmployeeSalaryStructure {
+  id?: string;
+  employeeId: string;
+  earnings: SalaryAttribute[];
+  deductions: SalaryAttribute[];
+  grossSalary: number;
+  totalDeductions: number;
+  netPay: number;
+  updatedAt?: string;
+}
+
+export interface MonthlyPayslip {
+  id: string;
+  employeeId: string;
+  month: string;
+  year: number;
+  monthIndex: number;
+  paymentDate: string;
+  workingDays: number;
+  paidDays: number;
+  earnings: SalaryAttribute[];
+  deductions: SalaryAttribute[];
+  grossSalary: number;
+  totalDeductions: number;
+  netPay: number;
+  status: "Generated" | "Paid" | "Processing";
 }
 
 export interface HolidayItem {
@@ -796,4 +832,281 @@ export async function getHolidaysFromStorage(filterYear?: string | number): Prom
     return seeded;
   }
   return [];
+}
+
+
+/* ---------------- SALARY & PAYROLL STORAGE HELPERS ---------------- */
+export const LOCAL_STORAGE_KEY_SALARY_STRUCTURES = "gamanext_salary_structures";
+
+export const DEFAULT_SALARY_STRUCTURE = (employeeId: string): EmployeeSalaryStructure => ({
+  employeeId,
+  earnings: [
+    { id: "earn-1", name: "Basic Salary", amount: 25000 },
+    { id: "earn-2", name: "House Rent Allowance (HRA)", amount: 12500 },
+    { id: "earn-3", name: "Special Allowance", amount: 10000 },
+    { id: "earn-4", name: "Conveyance Allowance", amount: 2500 },
+  ],
+  deductions: [
+    { id: "ded-1", name: "Provident Fund (PF)", amount: 1800 },
+    { id: "ded-2", name: "Professional Tax (PT)", amount: 200 },
+    { id: "ded-3", name: "Health Insurance", amount: 1000 },
+  ],
+  grossSalary: 50000,
+  totalDeductions: 3000,
+  netPay: 47000,
+});
+
+export async function getSalaryStructureForEmployee(
+  employeeId: string,
+  employeeObj?: EmployeeData | null
+): Promise<EmployeeSalaryStructure> {
+  // 1. Check direct salaryStructure property on employee object
+  if (employeeObj && employeeObj.salaryStructure && employeeObj.salaryStructure.earnings && employeeObj.salaryStructure.earnings.length > 0) {
+    const s = employeeObj.salaryStructure;
+    const gross = (s.earnings || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalDed = (s.deductions || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    return {
+      ...s,
+      grossSalary: gross,
+      totalDeductions: totalDed,
+      netPay: gross - totalDed,
+    };
+  }
+
+  // 2. Check Firestore collection "salary_structures"
+  try {
+    const q = query(
+      collection(db, "salary_structures"),
+      where("employeeId", "==", employeeId)
+    );
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      const docSnap = snapshot.docs[0];
+      const data = docSnap.data();
+      const earnings: SalaryAttribute[] = data.earnings || [];
+      const deductions: SalaryAttribute[] = data.deductions || [];
+      const gross = earnings.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      const totalDed = deductions.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      const net = gross - totalDed;
+      return {
+        id: docSnap.id,
+        employeeId,
+        earnings,
+        deductions,
+        grossSalary: gross,
+        totalDeductions: totalDed,
+        netPay: net,
+        updatedAt: data.updatedAt,
+      };
+    }
+  } catch (e) {}
+
+  // 3. Check LocalStorage salary structures
+  if (typeof window !== "undefined") {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY_SALARY_STRUCTURES);
+    if (data) {
+      try {
+        const list: EmployeeSalaryStructure[] = JSON.parse(data);
+        const found = list.find(
+          (s) => s.employeeId === employeeId || (employeeObj && s.employeeId === employeeObj.employeeId) || (employeeObj && s.employeeId === employeeObj.id)
+        );
+        if (found && found.earnings && found.earnings.length > 0) {
+          const gross = (found.earnings || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+          const totalDed = (found.deductions || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+          return {
+            ...found,
+            grossSalary: gross,
+            totalDeductions: totalDed,
+            netPay: gross - totalDed,
+          };
+        }
+      } catch (e) {}
+    }
+
+    // 4. Check LocalStorage employee data
+    const empDataStr = localStorage.getItem(LOCAL_STORAGE_KEY_EMPLOYEES);
+    if (empDataStr) {
+      try {
+        const employees: EmployeeData[] = JSON.parse(empDataStr);
+        const foundEmp = employees.find(
+          (e) => e.id === employeeId || e.employeeId === employeeId
+        );
+        if (foundEmp && foundEmp.salaryStructure && foundEmp.salaryStructure.earnings && foundEmp.salaryStructure.earnings.length > 0) {
+          const s = foundEmp.salaryStructure;
+          const gross = (s.earnings || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+          const totalDed = (s.deductions || []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+          return {
+            ...s,
+            grossSalary: gross,
+            totalDeductions: totalDed,
+            netPay: gross - totalDed,
+          };
+        }
+      } catch (e) {}
+    }
+  }
+
+  return DEFAULT_SALARY_STRUCTURE(employeeId);
+}
+
+export async function saveSalaryStructureForEmployee(
+  structure: EmployeeSalaryStructure,
+  employeeDocId?: string
+): Promise<EmployeeSalaryStructure> {
+  const gross = structure.earnings.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const totalDed = structure.deductions.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const net = gross - totalDed;
+
+  const itemToSave: EmployeeSalaryStructure = {
+    ...structure,
+    grossSalary: gross,
+    totalDeductions: totalDed,
+    netPay: net,
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    if (itemToSave.id && !itemToSave.id.startsWith("sal-")) {
+      const { id, ...data } = itemToSave;
+      await updateDoc(doc(db, "salary_structures", itemToSave.id), data);
+    } else {
+      const docRef = await addDoc(collection(db, "salary_structures"), itemToSave);
+      itemToSave.id = docRef.id;
+    }
+  } catch (e) {
+    if (!itemToSave.id) {
+      itemToSave.id = `sal-${Date.now()}`;
+    }
+  }
+
+  const targetDocId = employeeDocId || structure.employeeId;
+  if (targetDocId && !targetDocId.startsWith("emp-")) {
+    try {
+      await updateDoc(doc(db, "employees", targetDocId), {
+        salaryStructure: itemToSave,
+      });
+    } catch (e) {}
+  }
+
+  if (typeof window !== "undefined") {
+    const existingStr = localStorage.getItem(LOCAL_STORAGE_KEY_SALARY_STRUCTURES);
+    const existing: EmployeeSalaryStructure[] = existingStr ? JSON.parse(existingStr) : [];
+    const updated = existing.filter((s) => s.employeeId !== structure.employeeId);
+    updated.unshift(itemToSave);
+    localStorage.setItem(LOCAL_STORAGE_KEY_SALARY_STRUCTURES, JSON.stringify(updated));
+
+    const empDataStr = localStorage.getItem(LOCAL_STORAGE_KEY_EMPLOYEES);
+    if (empDataStr) {
+      try {
+        const employees: EmployeeData[] = JSON.parse(empDataStr);
+        const updatedEmployees = employees.map((emp) => {
+          if (emp.id === targetDocId || emp.id === structure.employeeId || emp.employeeId === structure.employeeId) {
+            return { ...emp, salaryStructure: itemToSave };
+          }
+          return emp;
+        });
+        localStorage.setItem(LOCAL_STORAGE_KEY_EMPLOYEES, JSON.stringify(updatedEmployees));
+      } catch (e) {}
+    }
+  }
+
+  return itemToSave;
+}
+
+export function generateMonthlyPayslips(
+  employee: EmployeeData,
+  structure: EmployeeSalaryStructure,
+  year = 2026
+): MonthlyPayslip[] {
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const empKey = employee.id || employee.employeeId;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIdx = now.getMonth();
+
+  const payslips: MonthlyPayslip[] = [];
+
+  const joiningDate = employee.dateOfJoining ? new Date(employee.dateOfJoining) : new Date(2025, 0, 1);
+  const joiningYear = isNaN(joiningDate.getTime()) ? 2025 : joiningDate.getFullYear();
+  const joiningMonthIdx = isNaN(joiningDate.getTime()) ? 0 : joiningDate.getMonth();
+
+  for (let m = 0; m < 12; m++) {
+    const isPastOrCurrent =
+      year < currentYear || (year === currentYear && m <= currentMonthIdx);
+
+    const isAfterJoining =
+      year > joiningYear || (year === joiningYear && m >= joiningMonthIdx);
+
+    if (!isAfterJoining) continue;
+
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    const monthName = monthNames[m];
+    const displayMonth = `${monthName} ${year}`;
+    const paymentDate = `01 ${monthName.slice(0, 3)} ${year}`;
+
+    payslips.push({
+      id: `payslip-${empKey}-${year}-${m + 1}`,
+      employeeId: empKey,
+      month: displayMonth,
+      year,
+      monthIndex: m,
+      paymentDate,
+      workingDays: daysInMonth,
+      paidDays: daysInMonth,
+      earnings: structure.earnings,
+      deductions: structure.deductions,
+      grossSalary: structure.grossSalary,
+      totalDeductions: structure.totalDeductions,
+      netPay: structure.netPay,
+      status: isPastOrCurrent ? "Generated" : "Processing",
+    });
+  }
+
+  return payslips.sort((a, b) => b.monthIndex - a.monthIndex);
+}
+
+export function amountInWords(num: number): string {
+  if (num <= 0) return "Rupees Zero Only";
+  const a = [
+    "", "One ", "Two ", "Three ", "Four ", "Five ", "Six ", "Seven ", "Eight ", "Nine ", "Ten ",
+    "Eleven ", "Twelve ", "Thirteen ", "Fourteen ", "Fifteen ", "Sixteen ", "Seventeen ", "Eighteen ", "Nineteen "
+  ];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  function inWords(n: number): string {
+    if (n === 0) return "";
+    let str = "";
+    if (Math.floor(n / 10000000) > 0) {
+      str += inWords(Math.floor(n / 10000000)) + "Crore ";
+      n %= 10000000;
+    }
+    if (Math.floor(n / 100000) > 0) {
+      str += inWords(Math.floor(n / 100000)) + "Lakh ";
+      n %= 100000;
+    }
+    if (Math.floor(n / 1000) > 0) {
+      str += inWords(Math.floor(n / 1000)) + "Thousand ";
+      n %= 1000;
+    }
+    if (Math.floor(n / 100) > 0) {
+      str += inWords(Math.floor(n / 100)) + "Hundred ";
+      n %= 100;
+    }
+    if (n > 0) {
+      if (str !== "") str += "and ";
+      if (n < 20) {
+        str += a[n];
+      } else {
+        str += b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : " ");
+      }
+    }
+    return str;
+  }
+
+  const result = inWords(Math.round(num)).trim();
+  return `Rupees ${result} Only`;
 }
