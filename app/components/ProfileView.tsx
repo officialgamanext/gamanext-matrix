@@ -438,31 +438,48 @@ export default function ProfileView() {
           {activeSubTab === "projects" && (
             <div className="space-y-3 animate-in fade-in text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900">Assigned Project Allocations</span>
+                <span className="font-bold text-slate-900">Assigned Project History</span>
                 <span className="text-[10px] bg-blue-50 text-[#0052cc] px-2 py-0.5 rounded-[8px] font-bold">
                   View-Only
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {projects.length === 0 ? (
                   <div className="p-4 bg-slate-50 rounded-[8px] text-center text-slate-400 text-xs">
                     No project allocations currently assigned.
                   </div>
                 ) : (
-                  projects.map((p, idx) => (
-                    <div
-                      key={p.id || idx}
-                      className="p-3 rounded-[8px] bg-slate-50 border border-slate-100 flex items-center justify-between"
-                    >
-                      <div>
-                        <span className="font-bold text-slate-900 block">{p.projectName}</span>
-                        <span className="text-[11px] text-slate-500 font-medium">{p.role}</span>
+                  projects.map((p, idx) => {
+                    const isActive = p.status === "Active";
+                    return (
+                      <div
+                        key={p.id || idx}
+                        className={`p-3.5 rounded-[8px] bg-slate-50 border space-y-1.5 ${
+                          isActive ? "border-blue-300 bg-blue-50/20" : "border-slate-100"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-bold text-slate-900 block">{p.projectName}</span>
+                            <span className="text-[11px] text-slate-500 font-medium">Role: {p.role || "Developer"}</span>
+                          </div>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-[8px] border ${
+                              isActive
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-slate-100 text-slate-600 border border-slate-200"
+                            }`}
+                          >
+                            {isActive ? "● Active" : "Completed / Inactive"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 font-mono bg-white p-2 rounded-[8px] border border-slate-100 flex items-center justify-between">
+                          <span>From: {p.startDate || "2026-01-01"}</span>
+                          <span>To: {p.endDate || "Ongoing / Active"}</span>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-[8px] bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {p.status}
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

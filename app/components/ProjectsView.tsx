@@ -8,8 +8,12 @@ import {
 } from "@/lib/firebase";
 import {
   Briefcase,
+  Calendar,
   Loader2,
   ShieldCheck,
+  CheckCircle2,
+  Clock,
+  History,
 } from "lucide-react";
 
 export default function ProjectsView() {
@@ -49,16 +53,17 @@ export default function ProjectsView() {
       employeeId: "emp",
       projectName: "Enterprise Matrix Management App",
       role: "Full Stack Developer",
-      startDate: "2026-02-01",
-      status: "Active",
+      startDate: "2025-06-01",
+      endDate: "2025-12-31",
+      status: "Completed",
     },
     {
       id: "p3",
       employeeId: "emp",
       projectName: "Internal Automation & API Suite",
       role: "System Integrator",
-      startDate: "2025-10-10",
-      endDate: "2026-04-30",
+      startDate: "2025-01-10",
+      endDate: "2025-05-30",
       status: "Completed",
     },
   ];
@@ -68,7 +73,7 @@ export default function ProjectsView() {
 
   return (
     <div className="max-w-md md:max-w-lg mx-auto px-4 pt-4 pb-28 space-y-5 animate-in fade-in">
-      {/* Top Header */}
+      {/* 1. Header Section */}
       <div className="flex items-center justify-between pt-1">
         <div className="flex items-center space-x-3">
           <div className="w-12 h-12 rounded-[8px] bg-[#0052cc] text-white flex items-center justify-center shadow-sm shrink-0">
@@ -76,10 +81,10 @@ export default function ProjectsView() {
           </div>
           <div>
             <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
-              My Projects
+              Project Allocations
             </h1>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Assigned project allocations & roles (View Only)
+              Assigned project history (View Only)
             </p>
           </div>
         </div>
@@ -89,73 +94,94 @@ export default function ProjectsView() {
         </span>
       </div>
 
-      {/* Notice Banner */}
+      {/* 2. Notice Banner */}
       <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-[8px] flex items-center space-x-2.5 text-xs text-blue-900">
         <ShieldCheck className="w-4.5 h-4.5 text-[#0052cc] shrink-0" />
         <span>
-          Project allocations are managed by your Administrator. This screen is in{" "}
-          <strong>View-Only</strong> mode.
+          Only one project is active at a time. View your full project assignment history from start date to end date below.
         </span>
       </div>
 
-      {/* Projects List */}
-      {loading ? (
-        <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center space-y-2">
-          <Loader2 className="w-6 h-6 animate-spin text-[#0052cc]" />
-          <span className="text-xs">Loading assigned projects...</span>
+      {/* 3. Project Assignment History List */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+            <History className="w-4 h-4 text-[#0052cc]" />
+            <span>Assignment History</span>
+          </h2>
+          <span className="text-[10px] text-slate-400 font-mono">
+            {displayList.length} Total Allocations
+          </span>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {displayList.map((proj, idx) => (
-            <div
-              key={proj.id || idx}
-              className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-3 transition-all hover:border-blue-200"
-            >
-              {/* Project Title & Status */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                    Project #{idx + 1}
-                  </span>
-                  <h3 className="text-sm font-bold text-slate-900">{proj.projectName}</h3>
-                </div>
 
-                <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-[8px] ${
-                    proj.status === "Active"
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                      : "bg-slate-100 text-slate-600 border border-slate-200"
+        {loading ? (
+          <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-[#0052cc]" />
+            <span className="text-xs">Loading assignment history...</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {displayList.map((proj, idx) => {
+              const isActive = proj.status === "Active";
+
+              return (
+                <div
+                  key={proj.id || idx}
+                  className={`bg-white rounded-[8px] border shadow-xs p-4 space-y-3 transition-all ${
+                    isActive ? "border-blue-300 ring-1 ring-blue-100" : "border-slate-100"
                   }`}
                 >
-                  {proj.status}
-                </span>
-              </div>
+                  {/* Top Row: Title & Active/Completed Badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center space-x-1.5">
+                        <Briefcase className="w-3.5 h-3.5 text-[#0052cc]" />
+                        <h3 className="text-sm font-bold text-slate-900">{proj.projectName}</h3>
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium pl-5 block">
+                        Role: <strong className="text-slate-800">{proj.role || "Developer"}</strong>
+                      </span>
+                    </div>
 
-              {/* Allocation Details */}
-              <div className="bg-slate-50/80 rounded-[8px] p-3 space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Allocated Role:</span>
-                  <span className="font-bold text-slate-800">{proj.role || "Developer"}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Start Date:</span>
-                  <span className="font-mono text-slate-700 font-medium">
-                    {proj.startDate || "2026-01-01"}
-                  </span>
-                </div>
-
-                {proj.endDate && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Target End Date:</span>
-                    <span className="font-mono text-slate-700 font-medium">{proj.endDate}</span>
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-[8px] shrink-0 ${
+                        isActive
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-slate-100 text-slate-600 border border-slate-200"
+                      }`}
+                    >
+                      {isActive ? "● Active Project" : "Completed / Inactive"}
+                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+
+                  {/* Dates Box (From Date & To Date) */}
+                  <div className="bg-slate-50 rounded-[8px] p-2.5 grid grid-cols-2 gap-2 text-xs border border-slate-100">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        From Date
+                      </span>
+                      <div className="flex items-center space-x-1 mt-0.5 font-mono text-slate-800 font-semibold">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        <span>{proj.startDate || "2026-01-01"}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        To Date
+                      </span>
+                      <div className="flex items-center space-x-1 mt-0.5 font-mono text-slate-800 font-semibold">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        <span>{proj.endDate || "Ongoing / Active"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

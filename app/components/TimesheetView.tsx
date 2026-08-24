@@ -6,10 +6,9 @@ import {
   getTimesheetsForEmployee,
   saveTimesheetForEmployee,
   getProjectsForEmployee,
-  getMasterProjectsFromStorage,
   TimesheetEntry,
+  ProjectAllocation,
 } from "@/lib/firebase";
-import CustomDatePicker from "./CustomDatePicker";
 import {
   Clock,
   Calendar as CalendarIcon,
@@ -21,25 +20,35 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Plus,
   X,
 } from "lucide-react";
 
 export default function TimesheetView() {
   const { employee } = useAuth();
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
+  const [activeProjectName, setActiveProjectName] = useState<string>("Gamanext Web Application");
   const [loading, setLoading] = useState(true);
 
-  // Form State
+  // Today's non-editable date
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
-  const [date, setDate] = useState(todayStr);
-  const [projectOptions, setProjectOptions] = useState<string[]>([]);
-  const [selectedProject, setSelectedProject] = useState("Gamanext Web Application");
-  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const todayIsoStr = today.toISOString().split("T")[0];
+
+  // Formatted date: e.g. "24 August 2026 (Monday)"
+  const formattedToday = today.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    weekday: "long",
+  });
+  // Format as "24 August 2026 (Monday)"
+  const day = today.getDate();
+  const monthName = today.toLocaleDateString("en-US", { month: "long" });
+  const year = today.getFullYear();
+  const weekdayName = today.toLocaleDateString("en-US", { weekday: "long" });
+  const todayDisplayString = `${day} ${monthName} ${year} (${weekdayName})`;
+
   const [billingHours, setBillingHours] = useState("08:00");
-  const [taskDescription, setTaskDescription] = useState("");
-  const [showTaskInput, setShowTaskInput] = useState(false);
+  const [taskNotes, setTaskNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -50,13 +59,13 @@ export default function TimesheetView() {
   const [showMonthFilter, setShowMonthFilter] = useState(false);
   const [showYearFilter, setShowYearFilter] = useState(false);
 
-  // Accordion open/close state for month groups
+  // Accordion state for month cards
+  const currentMonthKey = today.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const [expandedMonths, setExpandedMonths] = useState<{ [key: string]: boolean }>({
+    [currentMonthKey]: true,
     "May 2026": true,
-    "August 2026": true,
   });
 
-  // Action popup state for single entry
   const [selectedEntryDetails, setSelectedEntryDetails] = useState<TimesheetEntry | null>(null);
 
   useEffect(() => {
@@ -65,29 +74,21 @@ export default function TimesheetView() {
       const empKey = employee.id || employee.employeeId;
       setLoading(true);
       try {
-        const [tsList, projList, masterList] = await Promise.all([
+        const [tsList, projList] = await Promise.all([
           getTimesheetsForEmployee(empKey),
           getProjectsForEmployee(empKey),
-          getMasterProjectsFromStorage(),
         ]);
 
         setTimesheets(tsList);
 
-        const projectNames = Array.from(
-          new Set([
-            ...projList.map((p) => p.projectName),
-            ...masterList.map((m) => m.name),
-            "Gamanext Web Application",
-            "Mobile App Development",
-            "UI/UX Design",
-            "API Integration",
-            "Bug Fixing & Testing",
-          ])
-        ).filter(Boolean);
-
-        setProjectOptions(projectNames);
-        if (projectNames.length > 0) {
-          setSelectedProject(projectNames[0]);
+        // Find active allocated project
+        const activeProj = projList.find((p) => p.status === "Active");
+        if (activeProj) {
+          setActiveProjectName(activeProj.projectName);
+        } else if (projList.length > 0) {
+          setActiveProjectName(projList[0].projectName);
+        } else {
+          setActiveProjectName("Gamanext Web Application");
         }
       } catch (err) {
         console.error("Timesheet data load error:", err);
@@ -101,10 +102,6 @@ export default function TimesheetView() {
   const handleSaveTimesheet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employee) return;
-    if (!selectedProject.trim()) {
-      setErrorMsg("Please select an assigned project.");
-      return;
-    }
 
     setSubmitting(true);
     setErrorMsg("");
@@ -123,21 +120,18 @@ export default function TimesheetView() {
 
       const newEntry: TimesheetEntry = {
         employeeId: empKey,
-        date: date || todayStr,
-        projectName: selectedProject,
+        date: todayIsoStr,
+        projectName: activeProjectName,
         billingHours: parsedHours,
-        tasks: taskDescription.trim() || selectedProject,
+        tasks: taskNotes.trim() || activeProjectName,
       };
 
       const saved = await saveTimesheetForEmployee(newEntry);
       setTimesheets((prev) => [saved, ...prev]);
-      setTaskDescription("");
+      setTaskNotes("");
       setSuccessMsg("Timesheet entry saved successfully!");
 
-      const d = new Date(date || todayStr);
-      const mName = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-      setExpandedMonths((prev) => ({ ...prev, [mName]: true }));
-
+      setExpandedMonths((prev) => ({ ...prev, [currentMonthKey]: true }));
       setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err: any) {
       console.error("Save timesheet error:", err);
@@ -244,7 +238,7 @@ export default function TimesheetView() {
 
   return (
     <div className="max-w-md md:max-w-lg mx-auto px-4 pt-4 pb-28 space-y-5 animate-in fade-in">
-      {/* 1. Top Header Section */}
+      {/* 1. Header Section */}
       <div className="flex items-center space-x-3 pt-1">
         <div className="w-12 h-12 rounded-[8px] bg-[#0052cc] text-white flex items-center justify-center shadow-sm shrink-0">
           <Clock className="w-6 h-6 stroke-[2.5]" />
@@ -281,65 +275,36 @@ export default function TimesheetView() {
         )}
 
         <form onSubmit={handleSaveTimesheet} className="space-y-3.5">
-          {/* Field 1: Date */}
+          {/* Field 1: Date (NOT EDITABLE - Displays Today's Date) */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-800 block">
               Date <span className="text-rose-500">*</span>
             </label>
-            <CustomDatePicker
-              value={date}
-              onChange={setDate}
-              placeholder="Select date..."
-              className="w-full"
-            />
+            <div className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-[8px] flex items-center justify-between select-none cursor-default">
+              <div className="flex items-center space-x-2.5 truncate">
+                <CalendarIcon className="w-4 h-4 text-[#0052cc] shrink-0" />
+                <span className="text-slate-900 font-semibold truncate">
+                  {todayDisplayString}
+                </span>
+              </div>
+              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 opacity-60" />
+            </div>
           </div>
 
-          {/* Field 2: Assigned Project */}
-          <div className="space-y-1 relative">
+          {/* Field 2: Assigned Project (Displays Active Project Name) */}
+          <div className="space-y-1">
             <label className="text-xs font-bold text-slate-800 block">
               Assigned Project <span className="text-rose-500">*</span>
             </label>
-
-            <button
-              type="button"
-              onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-              className="w-full px-3.5 py-2.5 text-xs bg-white border border-slate-200 rounded-[8px] flex items-center justify-between hover:border-slate-300 transition-colors select-none"
-            >
+            <div className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-[8px] flex items-center justify-between select-none cursor-default">
               <div className="flex items-center space-x-2.5 truncate">
                 <Briefcase className="w-4 h-4 text-[#0052cc] shrink-0" />
-                <span className="text-slate-900 font-medium truncate">
-                  {selectedProject || "Select Assigned Project"}
+                <span className="text-slate-900 font-semibold truncate">
+                  {activeProjectName}
                 </span>
               </div>
-              <ChevronDown
-                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${
-                  showProjectDropdown ? "rotate-180 text-[#0052cc]" : ""
-                }`}
-              />
-            </button>
-
-            {showProjectDropdown && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-100 rounded-[8px] shadow-xl z-50 p-1.5 max-h-48 overflow-y-auto space-y-0.5 animate-in fade-in">
-                {projectOptions.map((proj) => (
-                  <button
-                    key={proj}
-                    type="button"
-                    onClick={() => {
-                      setSelectedProject(proj);
-                      setShowProjectDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs rounded-[8px] flex items-center space-x-2 transition-colors ${
-                      selectedProject === proj
-                        ? "bg-blue-50 text-[#0052cc] font-bold"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <Briefcase className="w-3.5 h-3.5 text-[#0052cc] shrink-0" />
-                    <span className="truncate">{proj}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 opacity-60" />
+            </div>
           </div>
 
           {/* Field 3: Billing Hours */}
@@ -364,31 +329,6 @@ export default function TimesheetView() {
             </div>
           </div>
 
-          {/* Task Details Description */}
-          <div className="pt-1">
-            {!showTaskInput ? (
-              <button
-                type="button"
-                onClick={() => setShowTaskInput(true)}
-                className="text-[11px] font-bold text-[#0052cc] hover:underline flex items-center space-x-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Add task description (optional)</span>
-              </button>
-            ) : (
-              <div className="space-y-1 animate-in fade-in">
-                <label className="text-xs font-bold text-slate-700 block">Task Details</label>
-                <textarea
-                  rows={2}
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  placeholder="Describe sprint items or deliverables completed today..."
-                  className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-[8px] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#0052cc] text-slate-800"
-                />
-              </div>
-            )}
-          </div>
-
           {/* Save Timesheet Button */}
           <button
             type="submit"
@@ -410,7 +350,7 @@ export default function TimesheetView() {
         </form>
       </div>
 
-      {/* 3. Timesheet History Section */}
+      {/* 3. Timesheet History Section Below */}
       <div className="space-y-3">
         <div className="flex items-center justify-between pt-2">
           <h2 className="text-sm font-bold text-slate-900 tracking-tight">Timesheet History</h2>
@@ -484,7 +424,7 @@ export default function TimesheetView() {
           </div>
         </div>
 
-        {/* Accordions */}
+        {/* Month Accordions */}
         <div className="space-y-3">
           {Object.keys(finalGroups).map((monthKey) => {
             const entries = finalGroups[monthKey] || [];
@@ -621,7 +561,7 @@ export default function TimesheetView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white rounded-[8px] shadow-2xl max-w-sm w-full border border-slate-100 overflow-hidden">
             <div className="bg-[#0052cc] p-4 text-white flex items-center justify-between">
-              <span className="text-xs font-bold">Timesheet Entry Details</span>
+              <span className="text-xs font-bold">Timesheet Details</span>
               <button
                 type="button"
                 onClick={() => setSelectedEntryDetails(null)}
@@ -641,7 +581,7 @@ export default function TimesheetView() {
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                  Project
+                  Project Name
                 </span>
                 <span className="font-semibold text-slate-800">
                   {selectedEntryDetails.projectName}
@@ -657,7 +597,7 @@ export default function TimesheetView() {
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">
-                  Tasks Completed
+                  Tasks Done
                 </span>
                 <p className="text-slate-700 bg-slate-50 p-3 rounded-[8px] border border-slate-100 leading-relaxed mt-1">
                   {selectedEntryDetails.tasks || "No additional task notes."}
