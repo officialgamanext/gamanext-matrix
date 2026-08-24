@@ -5,11 +5,20 @@ import { useAuth } from "@/lib/authContext";
 import {
   getProjectsForEmployee,
   getSalaryStructureForEmployee,
+  getSavedPayslipsForEmployee,
+  buildPayslipForMonth,
+  saveGeneratedPayslip,
   generateMonthlyPayslips,
   amountInWords,
   EmployeeSalaryStructure,
   MonthlyPayslip,
   getTimesheetsForEmployee,
+  getLeavesForEmployee,
+  getWFHForEmployee,
+  getHolidaysFromStorage,
+  LeaveRequest,
+  WFHRequest,
+  HolidayItem,
   updateEmployeeInStorage,
   EmployeeData,
   ProjectAllocation,
@@ -49,7 +58,11 @@ export default function ProfileView() {
 
   const [projects, setProjects] = useState<ProjectAllocation[]>([]);
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [wfhList, setWfhList] = useState<WFHRequest[]>([]);
+  const [holidays, setHolidays] = useState<HolidayItem[]>([]);
   const [salaryStructure, setSalaryStructure] = useState<EmployeeSalaryStructure | null>(null);
+  const [savedPayslips, setSavedPayslips] = useState<MonthlyPayslip[]>([]);
   const [previewPayslip, setPreviewPayslip] = useState<MonthlyPayslip | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,11 +86,24 @@ export default function ProfileView() {
       const empKey = employee.id || employee.employeeId;
       setLoading(true);
       try {
-        const [projList, tsList, salaryData] = await Promise.all([
+        const [projList, tsList, salaryData, leavesData, wfhData, holidaysData] = await Promise.all([
           getProjectsForEmployee(empKey),
           getTimesheetsForEmployee(empKey),
           getSalaryStructureForEmployee(empKey, employee),
+          getLeavesForEmployee(empKey),
+          getWFHForEmployee(empKey),
+          getHolidaysFromStorage(),
         ]);
+        setLeaves(leavesData);
+        setWfhList(wfhData);
+        setHolidays(holidaysData);
+        let savedP = await getSavedPayslipsForEmployee(empKey);
+        if (savedP.length === 0 && employee) {
+          const initialAug = buildPayslipForMonth(employee, salaryData, 2026, 7, tsList, leavesData, wfhData, holidaysData);
+          const savedAug = await saveGeneratedPayslip(initialAug);
+          savedP = [savedAug];
+        }
+        setSavedPayslips(savedP);
         setProjects(projList);
         setTimesheets(tsList);
         setSalaryStructure(salaryData);
@@ -412,7 +438,7 @@ export default function ProfileView() {
       {/* 4.5. My Payslips Section */}
       {(() => {
         const monthlyPayslips = employee && salaryStructure
-          ? generateMonthlyPayslips(employee, salaryStructure, 2026)
+          ? generateMonthlyPayslips(employee, salaryStructure, 2026, timesheets, leaves, wfhList, holidays)
           : [];
 
         return (
@@ -444,7 +470,7 @@ export default function ProfileView() {
                         <span className="font-bold text-xs text-slate-900">{payslip.month}</span>
                       </div>
                       <span className="text-[11px] font-bold text-emerald-700 font-mono pl-5 block">
-                        ₹ {payslip.netPay.toLocaleString("en-IN")} Net Pay
+                        ₹ {payslip.netPay.toLocaleString("en-IN")} Net Salary to Credit
                       </span>
                     </div>
 
@@ -759,19 +785,17 @@ export default function ProfileView() {
             <div className="p-6 md:p-8 space-y-5 bg-white text-slate-900 text-xs" id="printable-payslip">
               {/* Header */}
               <div className="flex items-start justify-between border-b-2 border-[#0052cc] pb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xl font-black text-[#0052cc] tracking-wider">GAMANEXT</span>
-                    <span className="text-xs font-bold bg-blue-50 text-[#0052cc] px-2 py-0.5 rounded">
-                      MATRIX
-                    </span>
+                <div className="space-y-1.5">
+                  <div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/gama-next-logo-reserved.png"
+                      alt="GAMANEXT"
+                      className="h-11 w-auto object-contain"
+                    />
                   </div>
-                  <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">
-                    Gamanext Technologies Private Limited
-                  </p>
-                  <p className="text-[11px] text-slate-500 leading-tight">
-                    Matrix Tower, IT Park, HITEC City, Hyderabad - 500081<br />
-                    Email: hr@gamanext.com • Web: https://gamanext.com
+                  <p className="text-[11px] text-slate-700 font-medium">
+                    <span className="font-semibold text-slate-900">Branch:</span> Gamaone &nbsp;|&nbsp; <span className="font-semibold text-slate-900">GSTIN:</span> 36AAGCG7123A1Z8
                   </p>
                 </div>
 
@@ -807,6 +831,14 @@ export default function ProfileView() {
                     <span className="w-24 text-slate-500 font-medium">Department:</span>
                     <span className="text-slate-800">{employee.department || "Technology"}</span>
                   </div>
+                  <div className="flex">
+                    <span className="w-24 text-slate-500 font-medium">Branch:</span>
+                    <span className="font-bold text-slate-900">Gamaone</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-24 text-slate-500 font-medium">Date of Joining:</span>
+                    <span className="text-slate-800">{employee.dateOfJoining || "—"}</span>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -823,13 +855,17 @@ export default function ProfileView() {
                     <span className="font-mono text-slate-800">{employee.bankIfscCode || "SBIN0001234"}</span>
                   </div>
                   <div className="flex">
+                    <span className="w-24 text-slate-500 font-medium">PAN Number:</span>
+                    <span className="font-mono text-slate-800">{employee.panCardNumber || "—"}</span>
+                  </div>
+                  <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">Paid Days:</span>
                     <span className="font-bold text-slate-900">{previewPayslip.paidDays} / {previewPayslip.workingDays} Days</span>
                   </div>
                 </div>
               </div>
 
-              {/* Earnings & Deductions Breakdown */}
+              {/* Earnings & Deductions Breakdown (Black text only) */}
               <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
                 <div className="grid grid-cols-2 divide-x divide-slate-200">
                   <div>
@@ -841,7 +877,7 @@ export default function ProfileView() {
                       {previewPayslip.earnings.map((e) => (
                         <div key={e.id} className="p-2 flex justify-between text-slate-700">
                           <span>{e.name}</span>
-                          <span className="font-mono font-semibold">₹ {Number(e.amount).toLocaleString("en-IN")}</span>
+                          <span className="font-mono font-semibold text-slate-900">₹ {Number(e.amount).toLocaleString("en-IN")}</span>
                         </div>
                       ))}
                     </div>
@@ -856,7 +892,7 @@ export default function ProfileView() {
                       {previewPayslip.deductions.map((d) => (
                         <div key={d.id} className="p-2 flex justify-between text-slate-700">
                           <span>{d.name}</span>
-                          <span className="font-mono font-semibold text-rose-600">₹ {Number(d.amount).toLocaleString("en-IN")}</span>
+                          <span className="font-mono font-semibold text-slate-900">₹ {Number(d.amount).toLocaleString("en-IN")}</span>
                         </div>
                       ))}
                     </div>
@@ -868,7 +904,7 @@ export default function ProfileView() {
                     <span>Total Gross Earnings</span>
                     <span className="font-mono">₹ {previewPayslip.grossSalary.toLocaleString("en-IN")}</span>
                   </div>
-                  <div className="flex justify-between text-rose-700">
+                  <div className="flex justify-between text-slate-900">
                     <span>Total Deductions</span>
                     <span className="font-mono">- ₹ {previewPayslip.totalDeductions.toLocaleString("en-IN")}</span>
                   </div>
@@ -878,7 +914,7 @@ export default function ProfileView() {
               {/* Net Pay */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3.5 rounded-xl border border-blue-200 space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-blue-900 uppercase">Net Salary Payable:</span>
+                  <span className="font-bold text-blue-900 uppercase">Net Salary to Credit:</span>
                   <span className="text-lg font-black text-[#0052cc] font-mono">
                     ₹ {previewPayslip.netPay.toLocaleString("en-IN")}
                   </span>
@@ -888,16 +924,14 @@ export default function ProfileView() {
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="pt-4 grid grid-cols-2 gap-6 text-xs border-t border-slate-200 text-center text-slate-500">
-                <div className="border-t border-slate-300 pt-1 font-medium">Employee Signature</div>
-                <div className="border-t border-slate-300 pt-1 font-medium text-[#0052cc]">Authorized Signatory</div>
+              {/* Clean Footer Note */}
+              <div className="text-[10px] text-slate-400 text-center pt-3 border-t border-slate-100">
+                This is a system-generated electronic payslip issued by Gamanext Technologies Pvt. Ltd. and requires no signature.
               </div>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
