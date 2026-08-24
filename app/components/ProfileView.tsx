@@ -4,695 +4,641 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/authContext";
 import {
   getProjectsForEmployee,
-  getRequestsForEmployee,
-  saveRequestForEmployee,
-  getYearlyReviewsForEmployee,
-  getPerformanceBandsForEmployee,
+  getTimesheetsForEmployee,
   updateEmployeeInStorage,
   EmployeeData,
   ProjectAllocation,
-  EmployeeRequest,
-  YearlyReview,
-  PerformanceBandRecord,
+  TimesheetEntry,
 } from "@/lib/firebase";
-import CustomDropdown from "./CustomDropdown";
 import {
   User,
-  ShieldCheck,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  Briefcase,
+  Building2,
   CreditCard,
-  PhoneCall,
+  Clock,
+  CalendarCheck,
   FolderKanban,
-  Receipt,
-  Award,
-  DollarSign,
-  Edit3,
+  Settings,
+  Lock,
+  Bell,
+  FileText,
+  LogOut,
+  ChevronRight,
+  X,
   CheckCircle2,
   AlertCircle,
-  Plus,
-  Loader2,
-  Lock,
-  MapPin,
-  Eye,
-  Mail,
-  Star,
-  Check,
+  TrendingUp,
 } from "lucide-react";
 
-type ProfileSubTab =
-  | "overview"
-  | "kyc"
-  | "bank"
-  | "emergency"
-  | "projects"
-  | "requests"
-  | "performance"
-  | "salary"
-  | "edit";
-
 export default function ProfileView() {
-  const { employee, updateCurrentEmployee } = useAuth();
-  const [activeSubTab, setActiveSubTab] = useState<ProfileSubTab>("overview");
+  const { employee, logout, updateCurrentEmployee } = useAuth();
 
   const [projects, setProjects] = useState<ProjectAllocation[]>([]);
-  const [requests, setRequests] = useState<EmployeeRequest[]>([]);
-  const [reviews, setReviews] = useState<YearlyReview[]>([]);
-  const [bands, setBands] = useState<PerformanceBandRecord[]>([]);
+  const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Request Form State
-  const [reqType, setReqType] = useState<
-    "Accessories Allowance" | "Monthly Network/WiFi Bill Reimbursement"
-  >("Monthly Network/WiFi Bill Reimbursement");
-  const [reqAmount, setReqAmount] = useState("1000");
-  const [reqDesc, setReqDesc] = useState("");
-  const [submittingReq, setSubmittingReq] = useState(false);
-  const [reqSuccessMsg, setReqSuccessMsg] = useState("");
-  const [reqErrorMsg, setReqErrorMsg] = useState("");
-
-  // Edit Profile Form State
-  const [editData, setEditData] = useState<Partial<EmployeeData>>({});
+  // Change Password Modal
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [profileSuccessMsg, setProfileSuccessMsg] = useState("");
-  const [profileErrorMsg, setProfileErrorMsg] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState("");
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState("");
 
-  // KYC Image Preview Modal
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [previewImageTitle, setPreviewImageTitle] = useState("");
+  // Generic Policy / Terms Modal
+  const [policyModalType, setPolicyModalType] = useState<"privacy" | "terms" | "notifications" | null>(null);
+
+  // Logout Confirm Modal
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadProfileMetrics() {
       if (!employee) return;
       const empKey = employee.id || employee.employeeId;
-      setEditData({ ...employee });
+      setLoading(true);
       try {
-        const [projList, reqList, revList, bandList] = await Promise.all([
+        const [projList, tsList] = await Promise.all([
           getProjectsForEmployee(empKey),
-          getRequestsForEmployee(empKey),
-          getYearlyReviewsForEmployee(empKey),
-          getPerformanceBandsForEmployee(empKey),
+          getTimesheetsForEmployee(empKey),
         ]);
-
         setProjects(projList);
-        setRequests(reqList);
-        setReviews(revList);
-        setBands(bandList);
+        setTimesheets(tsList);
       } catch (err) {
-        console.error("Profile dataset load error:", err);
+        console.error("Profile load error:", err);
+      } finally {
+        setLoading(false);
       }
     }
-    loadData();
+    loadProfileMetrics();
   }, [employee]);
 
-  const handleCreateRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!employee) return;
-    if (!reqDesc.trim()) {
-      setReqErrorMsg("Please enter description / month for the claim.");
-      return;
-    }
+  // Calculate stats
+  const totalHoursNum = timesheets.reduce(
+    (acc, curr) => acc + (Number(curr.billingHours) || 0),
+    0
+  );
+  const totalHoursDisplay =
+    totalHoursNum > 0
+      ? `${Math.floor(totalHoursNum)}:${Math.round((totalHoursNum % 1) * 60)
+          .toString()
+          .padStart(2, "0")}`
+      : "168:30";
 
-    setSubmittingReq(true);
-    setReqErrorMsg("");
-    setReqSuccessMsg("");
+  const daysLoggedCount = timesheets.length > 0 ? timesheets.length : 22;
+  const projectsCount = projects.length > 0 ? projects.length : 5;
 
-    try {
-      const empKey = employee.id || employee.employeeId;
-      const newReq: EmployeeRequest = {
-        employeeId: empKey,
-        requestType: reqType,
-        amount: Number(reqAmount) || 1000,
-        monthOrDescription: reqDesc.trim(),
-        status: "Pending",
-      };
-
-      const saved = await saveRequestForEmployee(newReq);
-      setRequests((prev) => [saved, ...prev]);
-      setReqDesc("");
-      setReqSuccessMsg("Reimbursement claim submitted successfully!");
-      setTimeout(() => setReqSuccessMsg(""), 4000);
-    } catch (err: any) {
-      console.error("Save request error:", err);
-      setReqErrorMsg(err.message || "Failed to submit request.");
-    } finally {
-      setSubmittingReq(false);
-    }
-  };
-
-  const handleSaveProfileUpdates = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employee) return;
 
-    if (newPassword && newPassword !== confirmPassword) {
-      setProfileErrorMsg("New password and confirm password do not match.");
+    if (!newPassword.trim()) {
+      setPasswordErrorMsg("Please enter a new password.");
       return;
     }
 
-    setSavingProfile(true);
-    setProfileErrorMsg("");
-    setProfileSuccessMsg("");
+    if (newPassword !== confirmPassword) {
+      setPasswordErrorMsg("Passwords do not match.");
+      return;
+    }
+
+    setSavingPassword(true);
+    setPasswordErrorMsg("");
+    setPasswordSuccessMsg("");
 
     try {
       const empKey = employee.id || employee.employeeId;
-      const updatePayload: Partial<EmployeeData> = {
-        mobileNumber: editData.mobileNumber || employee.mobileNumber,
-        address: editData.address || employee.address,
-        city: editData.city || employee.city,
-        pincode: editData.pincode || employee.pincode,
-        bankName: editData.bankName || employee.bankName,
-        bankAccountNumber: editData.bankAccountNumber || employee.bankAccountNumber,
-        bankIfscCode: editData.bankIfscCode || employee.bankIfscCode,
-        emergencyContact1: editData.emergencyContact1 || employee.emergencyContact1,
-        emergencyContact2: editData.emergencyContact2 || employee.emergencyContact2,
-      };
-
-      if (newPassword.trim()) {
-        updatePayload.password = newPassword.trim();
-      }
-
-      await updateEmployeeInStorage(empKey, updatePayload);
-      updateCurrentEmployee(updatePayload);
+      await updateEmployeeInStorage(empKey, { password: newPassword.trim() });
+      updateCurrentEmployee({ password: newPassword.trim() });
+      setPasswordSuccessMsg("Password changed successfully!");
       setNewPassword("");
       setConfirmPassword("");
-      setProfileSuccessMsg("Profile information updated successfully!");
-      setTimeout(() => setProfileSuccessMsg(""), 4000);
+      setTimeout(() => {
+        setPasswordSuccessMsg("");
+        setIsPasswordModalOpen(false);
+      }, 1500);
     } catch (err: any) {
-      console.error("Update profile error:", err);
-      setProfileErrorMsg(err.message || "Failed to update profile.");
+      console.error("Password change error:", err);
+      setPasswordErrorMsg(err.message || "Failed to change password.");
     } finally {
-      setSavingProfile(false);
+      setSavingPassword(false);
     }
   };
 
   const getInitials = () => {
-    if (!employee) return "GN";
-    const f = employee.firstName ? employee.firstName[0].toUpperCase() : "";
-    const l = employee.lastName ? employee.lastName[0].toUpperCase() : "";
-    return f + l || "GN";
+    if (!employee) return "JD";
+    const f = employee.firstName ? employee.firstName[0].toUpperCase() : "J";
+    const l = employee.lastName ? employee.lastName[0].toUpperCase() : "D";
+    return f + l;
   };
 
-  const subTabs = [
-    { id: "overview" as ProfileSubTab, label: "Overview", icon: User },
-    { id: "kyc" as ProfileSubTab, label: "KYC Docs", icon: ShieldCheck },
-    { id: "bank" as ProfileSubTab, label: "Bank Info", icon: CreditCard },
-    { id: "emergency" as ProfileSubTab, label: "Emergency", icon: PhoneCall },
-    { id: "projects" as ProfileSubTab, label: "Projects", icon: FolderKanban },
-    { id: "requests" as ProfileSubTab, label: "Reimbursements", icon: Receipt },
-    { id: "performance" as ProfileSubTab, label: "Performance", icon: Award },
-    { id: "salary" as ProfileSubTab, label: "Compensation", icon: DollarSign },
-    { id: "edit" as ProfileSubTab, label: "Settings", icon: Edit3 },
-  ];
+  const fullName = employee
+    ? `${employee.firstName} ${employee.lastName}`
+    : "John Doe";
+  const employeeRole = employee?.employeeRole || "UI/UX Designer";
+  const employeeEmail = employee?.email || "john.doe@gamanext.com";
+  const employeeId = employee?.employeeId || "GNX-1025";
+  const mobileNumber = employee?.mobileNumber || "+91 98765 43210";
+  const dateOfJoining = employee?.dateOfJoining || "15 Jan 2024";
+  const locationDisplay = employee?.city
+    ? `${employee.city}, ${employee.pincode ? `(${employee.pincode})` : "India"}`
+    : "Hyderabad, India";
 
   return (
-    <div className="space-y-5 pb-28 max-w-md md:max-w-lg mx-auto px-4 pt-4 animate-in fade-in">
-      {/* 1. Profile Hero Card */}
-      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs overflow-hidden">
-        <div className="bg-gradient-to-r from-[#003680] via-[#0B4FBA] to-[#0A47A4] p-5 text-white">
-          <div className="flex items-center space-x-3.5">
+    <div className="max-w-md md:max-w-lg mx-auto pb-28 px-4 pt-3 space-y-4 animate-in fade-in">
+      {/* 1. Header Profile Banner matching reference image */}
+      <div className="relative overflow-hidden rounded-[8px] bg-gradient-to-r from-[#003680] via-[#0B4FBA] to-[#0A47A4] text-white p-6 shadow-sm">
+        {/* Background ambient light */}
+        <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col items-center text-center space-y-3 relative z-10">
+          {/* Avatar Container */}
+          <div className="relative">
             {employee?.profilePhotoUrl ? (
               <img
                 src={employee.profilePhotoUrl}
-                alt={employee.firstName}
-                className="w-14 h-14 rounded-[8px] object-cover border-2 border-white/60 shadow-xs"
+                alt={fullName}
+                className="w-24 h-24 rounded-full object-cover border-3 border-white shadow-md"
               />
             ) : (
-              <div className="w-14 h-14 rounded-[8px] bg-gradient-to-tr from-amber-500 to-pink-500 text-white font-extrabold text-xl flex items-center justify-center border-2 border-white/60 shadow-xs">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-amber-400 to-pink-500 text-white font-extrabold text-3xl flex items-center justify-center border-3 border-white shadow-md">
                 {getInitials()}
               </div>
             )}
+          </div>
 
-            <div className="space-y-0.5 truncate">
-              <div className="flex items-center space-x-2">
-                <h1 className="text-base font-extrabold text-white truncate">
-                  {employee?.firstName} {employee?.lastName}
-                </h1>
-                <span className="bg-white/20 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-[8px]">
-                  {employee?.employeeId || "GNA-001"}
-                </span>
-              </div>
-              <p className="text-xs text-blue-100 truncate">
-                {employee?.employeeRole || "Software Engineer"} • {employee?.department || "Technology"}
-              </p>
-              <p className="text-[11px] text-blue-200 truncate font-mono">
-                {employee?.email}
-              </p>
-            </div>
+          {/* Name & Role */}
+          <div className="space-y-0.5">
+            <h1 className="text-xl font-extrabold text-white tracking-tight">{fullName}</h1>
+            <p className="text-xs text-blue-100 font-medium">{employeeRole}</p>
+          </div>
+
+          {/* Email Badge Pill */}
+          <div className="inline-flex items-center space-x-1.5 bg-white/15 backdrop-blur-xs border border-white/20 px-3.5 py-1 rounded-full text-xs text-white">
+            <Mail className="w-3.5 h-3.5 text-blue-200" />
+            <span className="font-medium">{employeeEmail}</span>
           </div>
         </div>
+      </div>
 
-        {/* 2. Sub-Tabs Bar */}
-        <div className="bg-slate-50 border-b border-slate-100 px-2 py-1.5 overflow-x-auto scrollbar-none flex items-center space-x-1">
-          {subTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isCurrent = activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveSubTab(tab.id)}
-                className={`px-2.5 py-1.5 rounded-[8px] text-[11px] font-bold transition-all flex items-center space-x-1 shrink-0 select-none cursor-pointer ${
-                  isCurrent
-                    ? "bg-[#0052cc] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+      {/* 2. Personal Information Card (View Only) */}
+      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-4">
+        {/* Card Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <User className="w-4.5 h-4.5 text-[#0052cc]" />
+            <span>Personal Information</span>
+          </div>
+
+          <span className="text-[10px] font-bold text-[#0052cc] bg-blue-50 px-2 py-0.5 rounded-[8px] border border-blue-100">
+            View Only
+          </span>
         </div>
 
-        {/* 3. Sub-Tab Content Views */}
-        <div className="p-5">
-          {/* TAB 1: OVERVIEW */}
-          {activeSubTab === "overview" && (
-            <div className="space-y-4 animate-in fade-in text-xs">
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                    Employee ID
-                  </span>
-                  <span className="font-bold font-mono text-slate-800 mt-0.5 block">
-                    {employee?.employeeId || "—"}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                    Role / Position
-                  </span>
-                  <span className="font-bold text-slate-800 mt-0.5 block">
-                    {employee?.employeeRole || "—"}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                    Department
-                  </span>
-                  <span className="font-bold text-slate-800 mt-0.5 block">
-                    {employee?.department || "—"}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                    Joining Date
-                  </span>
-                  <span className="font-bold text-slate-800 mt-0.5 block">
-                    {employee?.dateOfJoining || "—"}
-                  </span>
-                </div>
+        {/* Info Rows */}
+        <div className="space-y-3.5 text-xs">
+          {/* Employee ID */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 text-slate-500">
+              <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                <Briefcase className="w-3.5 h-3.5" />
               </div>
+              <span className="font-medium text-slate-600">Employee ID</span>
+            </div>
+            <span className="font-bold text-slate-900 font-mono">{employeeId}</span>
+          </div>
 
-              <div className="p-3.5 rounded-[8px] bg-slate-50 border border-slate-100 space-y-1">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                  Residential Address
-                </span>
-                <span className="font-semibold text-slate-800 block">
-                  {employee?.address || "Address not specified"}
-                </span>
-                <span className="text-[11px] text-slate-500 block">
-                  {employee?.city || "—"} {employee?.pincode ? `- ${employee.pincode}` : ""}
-                </span>
+          {/* Email */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 text-slate-500">
+              <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                <Mail className="w-3.5 h-3.5" />
               </div>
+              <span className="font-medium text-slate-600">Email</span>
+            </div>
+            <span className="font-semibold text-slate-900 truncate max-w-[180px]">
+              {employeeEmail}
+            </span>
+          </div>
+
+          {/* Phone */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 text-slate-500">
+              <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                <Phone className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-medium text-slate-600">Phone</span>
+            </div>
+            <span className="font-semibold text-slate-900 font-mono">{mobileNumber}</span>
+          </div>
+
+          {/* Date of Joining */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 text-slate-500">
+              <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                <Calendar className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-medium text-slate-600">Date of Joining</span>
+            </div>
+            <span className="font-semibold text-slate-900">{dateOfJoining}</span>
+          </div>
+
+          {/* Location */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 text-slate-500">
+              <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                <MapPin className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-medium text-slate-600">Location</span>
+            </div>
+            <span className="font-semibold text-slate-900">{locationDisplay}</span>
+          </div>
+
+          {/* Department */}
+          <div className="flex items-center justify-between pt-1 border-t border-slate-50">
+            <div className="flex items-center space-x-2.5 text-slate-500">
+              <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <span className="font-medium text-slate-600">Department</span>
+            </div>
+            <span className="font-semibold text-slate-900">{employee?.department || "Technology"}</span>
+          </div>
+
+          {/* Date of Birth */}
+          {employee?.dateOfBirth && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 text-slate-500">
+                <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center">
+                  <Calendar className="w-3.5 h-3.5" />
+                </div>
+                <span className="font-medium text-slate-600">Date of Birth</span>
+              </div>
+              <span className="font-semibold text-slate-900">{employee.dateOfBirth}</span>
             </div>
           )}
 
-          {/* TAB 2: KYC & DOCUMENTS */}
-          {activeSubTab === "kyc" && (
-            <div className="space-y-4 animate-in fade-in text-xs">
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                    Aadhar Card
-                  </span>
-                  <span className="font-bold font-mono text-slate-900 mt-0.5 block">
-                    {employee?.aadharNumber || "Not Set"}
-                  </span>
+          {/* Residential Address */}
+          {employee?.address && (
+            <div className="flex items-start justify-between pt-1 border-t border-slate-50">
+              <div className="flex items-center space-x-2.5 text-slate-500">
+                <div className="w-6 h-6 rounded-[8px] bg-blue-50 text-[#0052cc] flex items-center justify-center shrink-0">
+                  <MapPin className="w-3.5 h-3.5" />
                 </div>
-
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-100">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                    PAN Card
-                  </span>
-                  <span className="font-bold font-mono text-slate-900 mt-0.5 block uppercase">
-                    {employee?.panCardNumber || "Not Set"}
-                  </span>
-                </div>
+                <span className="font-medium text-slate-600">Full Address</span>
               </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-200 text-center space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-800 block">Aadhar Front</span>
-                  {employee?.aadharFrontUrl ? (
-                    <div
-                      onClick={() => {
-                        setPreviewImageUrl(employee.aadharFrontUrl);
-                        setPreviewImageTitle("Aadhar Front");
-                      }}
-                      className="cursor-pointer overflow-hidden rounded-[8px] border border-slate-200 h-24 bg-white flex items-center justify-center"
-                    >
-                      <img src={employee.aadharFrontUrl} alt="Aadhar Front" className="h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="h-24 bg-slate-100 rounded-[8px] flex items-center justify-center text-slate-400 text-[11px]">
-                      Not Uploaded
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3 rounded-[8px] bg-slate-50 border border-slate-200 text-center space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-800 block">PAN Card</span>
-                  {employee?.panCardUrl ? (
-                    <div
-                      onClick={() => {
-                        setPreviewImageUrl(employee.panCardUrl);
-                        setPreviewImageTitle("PAN Card");
-                      }}
-                      className="cursor-pointer overflow-hidden rounded-[8px] border border-slate-200 h-24 bg-white flex items-center justify-center"
-                    >
-                      <img src={employee.panCardUrl} alt="PAN Card" className="h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="h-24 bg-slate-100 rounded-[8px] flex items-center justify-center text-slate-400 text-[11px]">
-                      Not Uploaded
-                    </div>
-                  )}
-                </div>
-              </div>
+              <span className="font-medium text-slate-800 text-right max-w-[190px] leading-tight">
+                {employee.address}, {employee.city || ""} {employee.pincode ? `- ${employee.pincode}` : ""}
+              </span>
             </div>
-          )}
-
-          {/* TAB 3: BANK INFO */}
-          {activeSubTab === "bank" && (
-            <div className="space-y-4 animate-in fade-in">
-              <div className="p-4 rounded-[8px] bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-xs space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-200">
-                    Salary Account
-                  </span>
-                  <CreditCard className="w-5 h-5 text-amber-300" />
-                </div>
-                <div className="text-sm font-bold">{employee?.bankName || "State Bank of India"}</div>
-                <div className="font-mono font-bold tracking-widest text-base">
-                  {employee?.bankAccountNumber || "•••• •••• •••• 9821"}
-                </div>
-                <div className="flex items-center justify-between pt-1 text-[11px]">
-                  <div>
-                    <span className="text-blue-300 block text-[9px]">IFSC CODE</span>
-                    <span className="font-mono font-bold">{employee?.bankIfscCode || "SBIN0001234"}</span>
-                  </div>
-                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2 py-0.5 rounded-[8px] text-[10px] font-semibold">
-                    Verified
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: EMERGENCY */}
-          {activeSubTab === "emergency" && (
-            <div className="space-y-3 animate-in fade-in text-xs">
-              <div className="p-3.5 rounded-[8px] bg-slate-50 border border-slate-200 space-y-1">
-                <div className="flex items-center justify-between border-b border-slate-200/80 pb-1.5">
-                  <span className="font-bold text-slate-900">Primary Contact</span>
-                  <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-[8px]">
-                    {employee?.emergencyContact1?.relation || "Relation"}
-                  </span>
-                </div>
-                <div className="pt-1 space-y-0.5">
-                  <span className="font-bold text-slate-800 block">
-                    {employee?.emergencyContact1?.name || "Not Configured"}
-                  </span>
-                  <span className="font-mono text-slate-600 block">
-                    {employee?.emergencyContact1?.mobileNumber || "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: PROJECTS (VIEW ONLY) */}
-          {activeSubTab === "projects" && (
-            <div className="space-y-3 animate-in fade-in text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900">Assigned Project History</span>
-                <span className="text-[10px] bg-blue-50 text-[#0052cc] px-2 py-0.5 rounded-[8px] font-bold">
-                  View-Only
-                </span>
-              </div>
-              <div className="space-y-2.5">
-                {projects.length === 0 ? (
-                  <div className="p-4 bg-slate-50 rounded-[8px] text-center text-slate-400 text-xs">
-                    No project allocations currently assigned.
-                  </div>
-                ) : (
-                  projects.map((p, idx) => {
-                    const isActive = p.status === "Active";
-                    return (
-                      <div
-                        key={p.id || idx}
-                        className={`p-3.5 rounded-[8px] bg-slate-50 border space-y-1.5 ${
-                          isActive ? "border-blue-300 bg-blue-50/20" : "border-slate-100"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-bold text-slate-900 block">{p.projectName}</span>
-                            <span className="text-[11px] text-slate-500 font-medium">Role: {p.role || "Developer"}</span>
-                          </div>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-[8px] border ${
-                              isActive
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : "bg-slate-100 text-slate-600 border border-slate-200"
-                            }`}
-                          >
-                            {isActive ? "● Active" : "Completed / Inactive"}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-600 font-mono bg-white p-2 rounded-[8px] border border-slate-100 flex items-center justify-between">
-                          <span>From: {p.startDate || "2026-01-01"}</span>
-                          <span>To: {p.endDate || "Ongoing / Active"}</span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 6: REIMBURSEMENTS */}
-          {activeSubTab === "requests" && (
-            <div className="space-y-4 animate-in fade-in text-xs">
-              <form onSubmit={handleCreateRequest} className="p-3.5 bg-slate-50 rounded-[8px] border border-slate-200 space-y-2.5">
-                <span className="font-bold text-slate-900 block">Submit Allowance Claim</span>
-
-                {reqSuccessMsg && (
-                  <div className="p-2 rounded-[8px] bg-emerald-50 text-emerald-800 text-[11px]">
-                    {reqSuccessMsg}
-                  </div>
-                )}
-                {reqErrorMsg && (
-                  <div className="p-2 rounded-[8px] bg-rose-50 text-rose-800 text-[11px]">
-                    {reqErrorMsg}
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-700 block">Category</label>
-                  <CustomDropdown
-                    options={[
-                      "Monthly Network/WiFi Bill Reimbursement",
-                      "Accessories Allowance",
-                    ]}
-                    value={reqType}
-                    onChange={(v) => setReqType(v as any)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-700 block">Amount (₹)</label>
-                    <input
-                      type="number"
-                      value={reqAmount}
-                      onChange={(e) => setReqAmount(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-[8px]"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-700 block">Month / Desc</label>
-                    <input
-                      type="text"
-                      value={reqDesc}
-                      onChange={(e) => setReqDesc(e.target.value)}
-                      placeholder="e.g. May 2026"
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-[8px]"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submittingReq}
-                  className="w-full py-2 bg-[#0052cc] hover:bg-[#0041a8] text-white text-xs font-bold rounded-[8px] transition-all"
-                >
-                  {submittingReq ? "Submitting..." : "Submit Claim"}
-                </button>
-              </form>
-
-              <div className="space-y-1.5">
-                <span className="font-bold text-slate-900 block text-[11px]">Recent Claims</span>
-                {requests.map((r, idx) => (
-                  <div
-                    key={r.id || idx}
-                    className="p-2.5 bg-slate-50 rounded-[8px] border border-slate-100 flex items-center justify-between text-xs"
-                  >
-                    <div>
-                      <span className="font-bold text-slate-800 block">{r.requestType}</span>
-                      <span className="text-[11px] text-slate-500">₹{r.amount} • {r.monthOrDescription}</span>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-[8px] bg-amber-50 text-amber-700 border border-amber-200">
-                      {r.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 7: PERFORMANCE */}
-          {activeSubTab === "performance" && (
-            <div className="space-y-3 animate-in fade-in text-xs">
-              <span className="font-bold text-slate-900 block">Performance Bands & Feedback</span>
-              {bands.length === 0 && reviews.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-[8px] text-center text-slate-400 text-xs">
-                  No performance records published yet.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {bands.map((b, idx) => (
-                    <div
-                      key={b.id || idx}
-                      className="p-3 bg-purple-50/70 rounded-[8px] border border-purple-100 flex items-center justify-between"
-                    >
-                      <span className="font-bold text-purple-950">Year {b.year}</span>
-                      <span className="bg-purple-600 text-white font-bold px-2 py-0.5 rounded-[8px] text-xs">
-                        {b.band}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 8: SALARY */}
-          {activeSubTab === "salary" && (
-            <div className="space-y-3 animate-in fade-in text-xs">
-              <div className="p-4 rounded-[8px] bg-slate-900 text-white space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="font-bold">Compensation Summary</span>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-[8px]">
-                    Direct Deposit
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="p-2 bg-slate-800 rounded-[8px]">
-                    <span className="text-[9px] text-slate-400 uppercase block">Basic Pay</span>
-                    <span className="font-bold text-sm">₹45,000</span>
-                  </div>
-                  <div className="p-2 bg-blue-950 rounded-[8px] border border-blue-500/40">
-                    <span className="text-[9px] text-blue-300 uppercase block">Net Monthly</span>
-                    <span className="font-bold text-sm text-amber-300">₹85,500</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 9: SETTINGS & EDIT */}
-          {activeSubTab === "edit" && (
-            <form onSubmit={handleSaveProfileUpdates} className="space-y-3 animate-in fade-in text-xs">
-              {profileSuccessMsg && (
-                <div className="p-2.5 rounded-[8px] bg-emerald-50 text-emerald-800 text-[11px]">
-                  {profileSuccessMsg}
-                </div>
-              )}
-              {profileErrorMsg && (
-                <div className="p-2.5 rounded-[8px] bg-rose-50 text-rose-800 text-[11px]">
-                  {profileErrorMsg}
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-700 block">Mobile Number</label>
-                <input
-                  type="text"
-                  value={editData.mobileNumber || ""}
-                  onChange={(e) => setEditData({ ...editData, mobileNumber: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-[8px]"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-700 block">Address</label>
-                <input
-                  type="text"
-                  value={editData.address || ""}
-                  onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-[8px]"
-                />
-              </div>
-
-              <div className="space-y-1 pt-1">
-                <label className="text-[10px] font-bold text-slate-700 block">Change Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New password"
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-[8px]"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="w-full py-2.5 bg-[#0052cc] hover:bg-[#0041a8] text-white text-xs font-bold rounded-[8px] transition-all"
-              >
-                {savingProfile ? "Saving..." : "Save Profile Changes"}
-              </button>
-            </form>
           )}
         </div>
       </div>
 
-      {/* KYC Image Preview Modal */}
-      {previewImageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-[8px] shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden">
-            <div className="bg-slate-900 text-white p-3 flex items-center justify-between">
-              <span className="text-xs font-bold">{previewImageTitle}</span>
+      {/* 3. Banking & Emergency Details Card (View Only) */}
+      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <CreditCard className="w-4.5 h-4.5 text-[#0052cc]" />
+            <span>Banking & Emergency Details</span>
+          </div>
+
+          <span className="text-[10px] font-bold text-[#0052cc] bg-blue-50 px-2 py-0.5 rounded-[8px] border border-blue-100">
+            View Only
+          </span>
+        </div>
+
+        <div className="space-y-3 text-xs">
+          {/* Bank Account */}
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-medium">Bank Account</span>
+            <span className="font-bold text-slate-900">
+              {employee?.bankName || "State Bank of India"} ({employee?.bankAccountNumber || "•••• 9821"})
+            </span>
+          </div>
+
+          {/* IFSC Code */}
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500 font-medium">IFSC Code</span>
+            <span className="font-mono font-bold text-slate-800">
+              {employee?.bankIfscCode || "SBIN0001234"}
+            </span>
+          </div>
+
+          {/* Emergency Contact */}
+          {employee?.emergencyContact1?.name && (
+            <div className="flex items-start justify-between pt-1 border-t border-slate-50">
+              <span className="text-slate-500 font-medium">Emergency Contact</span>
+              <div className="text-right">
+                <span className="font-bold text-slate-900 block">
+                  {employee.emergencyContact1.name} ({employee.emergencyContact1.relation || "Contact"})
+                </span>
+                <span className="font-mono text-slate-600 text-[11px]">
+                  {employee.emergencyContact1.mobileNumber || "—"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Work Summary Card (3 Stat Columns) */}
+      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-3">
+        <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2.5">
+          <TrendingUp className="w-4.5 h-4.5 text-[#0052cc]" />
+          <span>Work Summary</span>
+        </div>
+
+        <div className="grid grid-cols-3 divide-x divide-slate-100 text-center pt-1">
+          {/* Stat 1: Total Hours */}
+          <div className="px-2 space-y-1">
+            <div className="w-8 h-8 rounded-full bg-blue-50 text-[#0052cc] flex items-center justify-center mx-auto">
+              <Clock className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-slate-900 block font-mono">
+              {totalHoursDisplay}
+            </span>
+            <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-tight">
+              Total Hours
+            </span>
+          </div>
+
+          {/* Stat 2: Days Logged */}
+          <div className="px-2 space-y-1">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+              <CalendarCheck className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-slate-900 block font-mono">
+              {daysLoggedCount}
+            </span>
+            <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-tight">
+              Days Logged
+            </span>
+          </div>
+
+          {/* Stat 3: Projects */}
+          <div className="px-2 space-y-1">
+            <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+              <FolderKanban className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-slate-900 block font-mono">
+              {projectsCount}
+            </span>
+            <span className="text-[10px] font-semibold text-slate-400 block uppercase tracking-tight">
+              Projects
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Account Settings List */}
+      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-2">
+        <div className="flex items-center space-x-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2.5 mb-1">
+          <Settings className="w-4.5 h-4.5 text-[#0052cc]" />
+          <span>Account</span>
+        </div>
+
+        <div className="divide-y divide-slate-100 text-xs">
+          {/* Change Password */}
+          <button
+            type="button"
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="w-full py-3 flex items-center justify-between text-slate-700 hover:text-slate-900 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center space-x-3">
+              <Lock className="w-4 h-4 text-slate-400 group-hover:text-[#0052cc] transition-colors" />
+              <span className="font-medium">Change Password</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+          </button>
+
+          {/* Notification Settings */}
+          <button
+            type="button"
+            onClick={() => setPolicyModalType("notifications")}
+            className="w-full py-3 flex items-center justify-between text-slate-700 hover:text-slate-900 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center space-x-3">
+              <Bell className="w-4 h-4 text-slate-400 group-hover:text-[#0052cc] transition-colors" />
+              <span className="font-medium">Notification Settings</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+          </button>
+
+          {/* Privacy Policy */}
+          <button
+            type="button"
+            onClick={() => setPolicyModalType("privacy")}
+            className="w-full py-3 flex items-center justify-between text-slate-700 hover:text-slate-900 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center space-x-3">
+              <FileText className="w-4 h-4 text-slate-400 group-hover:text-[#0052cc] transition-colors" />
+              <span className="font-medium">Privacy Policy</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+          </button>
+
+          {/* Terms & Conditions */}
+          <button
+            type="button"
+            onClick={() => setPolicyModalType("terms")}
+            className="w-full py-3 flex items-center justify-between text-slate-700 hover:text-slate-900 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center space-x-3">
+              <FileText className="w-4 h-4 text-slate-400 group-hover:text-[#0052cc] transition-colors" />
+              <span className="font-medium">Terms & Conditions</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+          </button>
+
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={() => setIsLogoutModalOpen(true)}
+            className="w-full py-3 flex items-center justify-between text-rose-600 hover:text-rose-700 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center space-x-3">
+              <LogOut className="w-4 h-4 text-rose-500" />
+              <span className="font-bold">Logout</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-rose-400" />
+          </button>
+        </div>
+      </div>
+
+      {/* App Version Footer */}
+      <div className="text-center pt-2 pb-6">
+        <span className="text-[11px] font-medium text-slate-400">App Version 1.0.0</span>
+      </div>
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-[8px] shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden">
+            <div className="bg-[#0052cc] text-white p-4 flex items-center justify-between">
+              <span className="text-sm font-bold">Change Password</span>
               <button
                 type="button"
-                onClick={() => setPreviewImageUrl(null)}
-                className="text-slate-400 hover:text-white text-xs font-bold p-1"
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="text-white hover:bg-blue-800/60 p-1 rounded-[8px]"
               >
-                Close
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 bg-slate-100 flex items-center justify-center max-h-[70vh] overflow-auto">
-              <img
-                src={previewImageUrl}
-                alt={previewImageTitle}
-                className="max-h-96 w-auto object-contain rounded-[8px]"
-              />
+
+            <form onSubmit={handleChangePassword} className="p-5 space-y-3 text-xs">
+              {passwordSuccessMsg && (
+                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-[8px] border border-emerald-200 flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{passwordSuccessMsg}</span>
+                </div>
+              )}
+              {passwordErrorMsg && (
+                <div className="p-2.5 bg-rose-50 text-rose-800 rounded-[8px] border border-rose-200 flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600" />
+                  <span>{passwordErrorMsg}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-[8px] text-xs text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-[8px] text-xs text-slate-900"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-[8px] font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPassword}
+                  className="px-4 py-2 bg-[#0052cc] hover:bg-[#0041a8] text-white rounded-[8px] font-bold shadow-xs"
+                >
+                  {savingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications / Privacy Policy / Terms Modal */}
+      {policyModalType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-[8px] shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div className="bg-[#0052cc] text-white p-4 flex items-center justify-between">
+              <span className="text-sm font-bold">
+                {policyModalType === "privacy" && "Privacy Policy"}
+                {policyModalType === "terms" && "Terms & Conditions"}
+                {policyModalType === "notifications" && "Notification Preferences"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPolicyModalType(null)}
+                className="text-white hover:bg-blue-800/60 p-1 rounded-[8px]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 text-xs text-slate-700 space-y-3 max-h-72 overflow-y-auto leading-relaxed">
+              {policyModalType === "privacy" && (
+                <p>
+                  Gamanext Software Solutions Pvt Ltd ensures complete confidentiality of your employee data, personal records, and credentials. All data is encrypted and securely stored.
+                </p>
+              )}
+              {policyModalType === "terms" && (
+                <p>
+                  By accessing the Gamanext Matrix Portal, employees agree to adhere to company policies, internal compliance standards, accurate daily timesheet reporting, and timely leave submissions.
+                </p>
+              )}
+              {policyModalType === "notifications" && (
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" defaultChecked className="rounded text-[#0052cc]" />
+                    <span>Timesheet reminder alerts</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" defaultChecked className="rounded text-[#0052cc]" />
+                    <span>Leave approval notifications</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" defaultChecked className="rounded text-[#0052cc]" />
+                    <span>Holiday & company announcements</span>
+                  </label>
+                </div>
+              )}
+            </div>
+            <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPolicyModalType(null)}
+                className="px-4 py-1.5 bg-[#0052cc] text-white text-xs font-bold rounded-[8px]"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirm Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-[8px] shadow-2xl max-w-sm w-full border border-slate-200 overflow-hidden p-5 space-y-4">
+            <div className="flex items-center space-x-3 text-rose-600">
+              <div className="p-2.5 rounded-full bg-rose-50">
+                <LogOut className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Confirm Logout</h3>
+                <p className="text-xs text-slate-500">Are you sure you want to sign out?</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[8px] text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogoutModalOpen(false);
+                  logout();
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-[8px] text-xs font-bold transition-colors shadow-xs"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
