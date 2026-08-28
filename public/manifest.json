@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "GamaNext Matrix Employee Portal",
-  "short_name": "GamaNext",
+  "name": "Matrix",
+  "short_name": "Matrix",
   "description": "Official Employee Portal for GamaNext Software Solutions - Timesheets, Reports, Projects & Profile",
   "start_url": "/",
   "scope": "/",

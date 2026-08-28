@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "GamaNext",
+    title: "Matrix",
   },
   icons: {
     icon: [
@@ -58,7 +58,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="GamaNext" />
+        <meta name="apple-mobile-web-app-title" content="Matrix" />
+        <meta name="application-name" content="Matrix" />
       </head>
       <body className={`${sora.className} min-h-full flex flex-col bg-slate-100 text-slate-900`}>
         <PwaRegister />
