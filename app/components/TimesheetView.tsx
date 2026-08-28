@@ -35,7 +35,7 @@ export default function TimesheetView() {
   const [timesheets, setTimesheets] = useState<TimesheetEntry[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [holidays, setHolidays] = useState<HolidayItem[]>([]);
-  const [activeProjectName, setActiveProjectName] = useState<string>("Gamanext Web Application");
+  const [activeProjectName, setActiveProjectName] = useState<string>("Unassigned Project");
   const [loading, setLoading] = useState(true);
 
   // Calendar Popup Modal State
@@ -101,7 +101,7 @@ export default function TimesheetView() {
         } else if (projList.length > 0) {
           setActiveProjectName(projList[0].projectName);
         } else {
-          setActiveProjectName("Gamanext Web Application");
+          setActiveProjectName("Unassigned Project");
         }
       } catch (err) {
         console.error("Timesheet data load error:", err);
@@ -139,9 +139,9 @@ export default function TimesheetView() {
       const newEntry: TimesheetEntry = {
         employeeId: empKey,
         date: todayIsoStr,
-        projectName: activeProjectName,
+        projectName: activeProjectName || "General Task",
         billingHours: parsedHours,
-        tasks: taskNotes.trim() || activeProjectName,
+        tasks: taskNotes.trim() || activeProjectName || "General Tasks",
       };
 
       const saved = await saveTimesheetForEmployee(newEntry);
@@ -166,55 +166,25 @@ export default function TimesheetView() {
     }));
   };
 
+  // Filter timesheets by selected month and year
+  const filteredTimesheets = timesheets.filter((ts) => {
+    if (!ts.date) return false;
+    const d = new Date(ts.date);
+    if (isNaN(d.getTime())) return true;
+    if (filterYear && filterYear !== "All" && String(d.getFullYear()) !== filterYear) {
+      return false;
+    }
+    if (filterMonth && filterMonth !== "All Months") {
+      const mName = d.toLocaleDateString("en-US", { month: "long" });
+      if (mName !== filterMonth) return false;
+    }
+    return true;
+  });
+
   // Group timesheets by Month
   const groupedTimesheets: { [month: string]: TimesheetEntry[] } = {};
 
-  const sampleFallbackData: { [month: string]: TimesheetEntry[] } = {
-    "May 2026": [
-      {
-        id: "s1",
-        employeeId: "emp",
-        date: "2026-05-23",
-        projectName: "Gamanext Web Application",
-        billingHours: 9,
-        tasks: "Frontend architecture & dashboard integration",
-      },
-      {
-        id: "s2",
-        employeeId: "emp",
-        date: "2026-05-22",
-        projectName: "Mobile App Development",
-        billingHours: 9,
-        tasks: "React Native UI components & screens",
-      },
-      {
-        id: "s3",
-        employeeId: "emp",
-        date: "2026-05-21",
-        projectName: "UI/UX Design",
-        billingHours: 9,
-        tasks: "Design system & Figma tokens layout",
-      },
-      {
-        id: "s4",
-        employeeId: "emp",
-        date: "2026-05-20",
-        projectName: "API Integration",
-        billingHours: 9,
-        tasks: "REST API endpoints & Firebase database hooks",
-      },
-      {
-        id: "s5",
-        employeeId: "emp",
-        date: "2026-05-19",
-        projectName: "Bug Fixing & Testing",
-        billingHours: 9,
-        tasks: "QA testing & unit test cases validation",
-      },
-    ],
-  };
-
-  timesheets.forEach((ts) => {
+  filteredTimesheets.forEach((ts) => {
     const d = new Date(ts.date);
     const mKey = isNaN(d.getTime())
       ? "Recent"
@@ -225,16 +195,7 @@ export default function TimesheetView() {
     groupedTimesheets[mKey].push(ts);
   });
 
-  const finalGroups =
-    Object.keys(groupedTimesheets).length > 0 ? groupedTimesheets : sampleFallbackData;
-
-  const defaultMonthTotals: { [key: string]: string } = {
-    "May 2026": "45:00",
-    "April 2026": "180:00",
-    "March 2026": "189:00",
-    "February 2026": "171:00",
-    "January 2026": "198:00",
-  };
+  const finalGroups = groupedTimesheets;
 
   const monthList = [
     "All Months",
@@ -518,132 +479,122 @@ export default function TimesheetView() {
 
         {/* Month Accordions */}
         <div className="space-y-3">
-          {Object.keys(finalGroups).map((monthKey) => {
-            const entries = finalGroups[monthKey] || [];
-            const isExpanded = !!expandedMonths[monthKey];
+          {Object.keys(finalGroups).length > 0 ? (
+            Object.keys(finalGroups).map((monthKey) => {
+              const entries = finalGroups[monthKey] || [];
+              const isExpanded = !!expandedMonths[monthKey];
 
-            const totalHoursNum = entries.reduce(
-              (acc, curr) => acc + (Number(curr.billingHours) || 0),
-              0
-            );
-            const totalHoursDisplay =
-              totalHoursNum > 0
-                ? `${Math.floor(totalHoursNum)}:${Math.round((totalHoursNum % 1) * 60)
-                    .toString()
-                    .padStart(2, "0")}`
-                : defaultMonthTotals[monthKey] || "45:00";
+              const totalHoursNum = entries.reduce(
+                (acc, curr) => acc + (Number(curr.billingHours) || 0),
+                0
+              );
+              const totalHoursDisplay =
+                totalHoursNum > 0
+                  ? `${Math.floor(totalHoursNum)}:${Math.round((totalHoursNum % 1) * 60)
+                      .toString()
+                      .padStart(2, "0")}`
+                  : "00:00";
 
-            return (
-              <div
-                key={monthKey}
-                className="bg-white rounded-[8px] border border-slate-100 shadow-xs overflow-hidden transition-all"
-              >
-                {/* Accordion Header */}
+              return (
                 <div
-                  onClick={() => toggleMonth(monthKey)}
-                  className="px-4 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50/70 transition-colors select-none"
+                  key={monthKey}
+                  className="bg-white rounded-[8px] border border-slate-100 shadow-xs overflow-hidden transition-all"
                 >
-                  <span className="font-bold text-xs text-[#0052cc]">{monthKey}</span>
+                  {/* Accordion Header */}
+                  <div
+                    onClick={() => toggleMonth(monthKey)}
+                    className="px-4 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50/70 transition-colors select-none"
+                  >
+                    <span className="font-bold text-xs text-[#0052cc]">{monthKey}</span>
 
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-bold text-slate-800">
-                      Total: <span className="font-mono">{totalHoursDisplay} hrs</span>
-                    </span>
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-[#0052cc]" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Day Rows */}
-                {isExpanded && (
-                  <div className="divide-y divide-slate-100 border-t border-slate-100 bg-white">
-                    {entries.map((entry, idx) => {
-                      const d = new Date(entry.date);
-                      const dayNum = isNaN(d.getTime()) ? "23" : d.getDate().toString();
-                      const monthAbbr = isNaN(d.getTime())
-                        ? "MAY"
-                        : d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
-                      const weekdayAbbr = isNaN(d.getTime())
-                        ? "Fri"
-                        : d.toLocaleDateString("en-US", { weekday: "short" });
-
-                      const formattedHours =
-                        typeof entry.billingHours === "number"
-                          ? `${Math.floor(entry.billingHours)
-                              .toString()
-                              .padStart(2, "0")}:${Math.round((entry.billingHours % 1) * 60)
-                              .toString()
-                              .padStart(2, "0")} hrs`
-                          : "09:00 hrs";
-
-                      return (
-                        <div
-                          key={entry.id || idx}
-                          className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-xs"
-                        >
-                          <div className="flex flex-col items-center justify-center w-8 shrink-0">
-                            <span className="font-black text-xs text-slate-900 leading-none">
-                              {dayNum}
-                            </span>
-                            <span className="text-[9px] font-bold text-slate-400 mt-0.5 tracking-tight">
-                              {monthAbbr}
-                            </span>
-                          </div>
-
-                          <div className="w-9 text-slate-400 font-medium text-[11px] shrink-0 pl-1">
-                            {weekdayAbbr}
-                          </div>
-
-                          <div className="flex-1 px-2 truncate font-semibold text-slate-800">
-                            {entry.projectName}
-                          </div>
-
-                          <div className="font-bold text-[#0052cc] font-mono text-xs shrink-0 px-2">
-                            {formattedHours}
-                          </div>
-
-                          <div className="relative shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedEntryDetails(entry)}
-                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-[8px] transition-colors cursor-pointer"
-                              title="View Details"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {["April 2026", "March 2026", "February 2026", "January 2026"].map(
-            (mName) =>
-              !finalGroups[mName] && (
-                <div
-                  key={mName}
-                  onClick={() => toggleMonth(mName)}
-                  className="bg-white rounded-[8px] border border-slate-100 shadow-xs px-4 py-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50/70 transition-colors select-none"
-                >
-                  <span className="font-bold text-xs text-[#0052cc]">{mName}</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-bold text-slate-800">
-                      Total:{" "}
-                      <span className="font-mono">
-                        {defaultMonthTotals[mName] || "180:00"} hrs
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-slate-800">
+                        Total: <span className="font-mono">{totalHoursDisplay} hrs</span>
                       </span>
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-[#0052cc]" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
                   </div>
+
+                  {/* Day Rows */}
+                  {isExpanded && (
+                    <div className="divide-y divide-slate-100 border-t border-slate-100 bg-white">
+                      {entries.map((entry, idx) => {
+                        const d = new Date(entry.date);
+                        const dayNum = isNaN(d.getTime()) ? "—" : d.getDate().toString();
+                        const monthAbbr = isNaN(d.getTime())
+                          ? "DATE"
+                          : d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+                        const weekdayAbbr = isNaN(d.getTime())
+                          ? "—"
+                          : d.toLocaleDateString("en-US", { weekday: "short" });
+
+                        const formattedHours =
+                          typeof entry.billingHours === "number"
+                            ? `${Math.floor(entry.billingHours)
+                                .toString()
+                                .padStart(2, "0")}:${Math.round((entry.billingHours % 1) * 60)
+                                .toString()
+                                .padStart(2, "0")} hrs`
+                            : "09:00 hrs";
+
+                        return (
+                          <div
+                            key={entry.id || idx}
+                            className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-xs"
+                          >
+                            <div className="flex flex-col items-center justify-center w-8 shrink-0">
+                              <span className="font-black text-xs text-slate-900 leading-none">
+                                {dayNum}
+                              </span>
+                              <span className="text-[9px] font-bold text-slate-400 mt-0.5 tracking-tight">
+                                {monthAbbr}
+                              </span>
+                            </div>
+
+                            <div className="w-9 text-slate-400 font-medium text-[11px] shrink-0 pl-1">
+                              {weekdayAbbr}
+                            </div>
+
+                            <div className="flex-1 px-2 truncate font-semibold text-slate-800">
+                              {entry.projectName}
+                            </div>
+
+                            <div className="font-bold text-[#0052cc] font-mono text-xs shrink-0 px-2">
+                              {formattedHours}
+                            </div>
+
+                            <div className="relative shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedEntryDetails(entry)}
+                                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-[8px] transition-colors cursor-pointer"
+                                title="View Details"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-8 text-center space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <Clock className="w-5 h-5" />
+              </div>
+              <h3 className="text-xs font-bold text-slate-800">No Timesheet Records Found</h3>
+              <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                No timesheet records found for the selected period. Submit your work hours using the form above.
+              </p>
+            </div>
           )}
         </div>
       </div>

@@ -116,7 +116,7 @@ export default function PayrollView() {
       </div>
 
       {/* Salary Overview Metric Cards */}
-      {salaryStructure && (
+      {salaryStructure && (salaryStructure.grossSalary > 0 || (salaryStructure.earnings && salaryStructure.earnings.length > 0)) ? (
         <div className="grid grid-cols-3 gap-2.5">
           <div className="bg-white p-3 rounded-[8px] border border-slate-100 shadow-xs space-y-1">
             <div className="flex items-center justify-between text-[10px] text-slate-500 font-semibold">
@@ -147,6 +147,13 @@ export default function PayrollView() {
               ₹ {currentNet.toLocaleString("en-IN")}
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="bg-white p-4 rounded-[8px] border border-slate-100 shadow-xs text-center space-y-1">
+          <div className="text-xs font-bold text-slate-700">Salary Structure Pending</div>
+          <p className="text-[11px] text-slate-400">
+            Your official salary structure has not been configured by HR/Finance yet.
+          </p>
         </div>
       )}
 
@@ -335,7 +342,7 @@ export default function PayrollView() {
                   </div>
                   <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">Department:</span>
-                    <span className="text-slate-800">{employee.department || "Technology"}</span>
+                    <span className="text-slate-800">{employee.department || "—"}</span>
                   </div>
                   <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">Branch:</span>
@@ -350,15 +357,15 @@ export default function PayrollView() {
                 <div className="space-y-1">
                   <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">Bank Name:</span>
-                    <span className="text-slate-800">{employee.bankName || "State Bank of India"}</span>
+                    <span className="text-slate-800">{employee.bankName || "—"}</span>
                   </div>
                   <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">A/C No:</span>
-                    <span className="font-mono font-bold text-slate-900">{employee.bankAccountNumber || "•••• 9821"}</span>
+                    <span className="font-mono font-bold text-slate-900">{employee.bankAccountNumber || "—"}</span>
                   </div>
                   <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">IFSC:</span>
-                    <span className="font-mono text-slate-800">{employee.bankIfscCode || "SBIN0001234"}</span>
+                    <span className="font-mono text-slate-800">{employee.bankIfscCode || "—"}</span>
                   </div>
                   <div className="flex">
                     <span className="w-24 text-slate-500 font-medium">PAN Number:</span>

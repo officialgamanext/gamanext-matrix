@@ -928,7 +928,7 @@ export const DEFAULT_SALARY_STRUCTURE = (employeeId: string): EmployeeSalaryStru
 export async function getSalaryStructureForEmployee(
   employeeId: string,
   employeeObj?: EmployeeData | null
-): Promise<EmployeeSalaryStructure> {
+): Promise<EmployeeSalaryStructure | null> {
   // 1. Check direct salaryStructure property on employee object
   if (employeeObj && employeeObj.salaryStructure && employeeObj.salaryStructure.earnings && employeeObj.salaryStructure.earnings.length > 0) {
     const s = employeeObj.salaryStructure;
@@ -1015,7 +1015,7 @@ export async function getSalaryStructureForEmployee(
     }
   }
 
-  return DEFAULT_SALARY_STRUCTURE(employeeId);
+  return null;
 }
 
 export async function saveSalaryStructureForEmployee(

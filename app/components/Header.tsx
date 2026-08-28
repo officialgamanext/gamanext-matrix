@@ -133,9 +133,11 @@ export default function Header({ onNavigateTab, activeTab }: HeaderProps) {
                       <p className="text-xs text-blue-200 truncate mt-0.5">
                         {employee.employeeRole || employee.department || "Employee"}
                       </p>
-                      <span className="inline-block mt-1 bg-white/20 px-2 py-0.5 rounded-[8px] text-[10px] font-mono">
-                        {employee.employeeId || "GNA-EMP"}
-                      </span>
+                      {employee.employeeId && (
+                        <span className="inline-block mt-1 bg-white/20 px-2 py-0.5 rounded-[8px] text-[10px] font-mono">
+                          {employee.employeeId}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

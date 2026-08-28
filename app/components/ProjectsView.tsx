@@ -38,37 +38,7 @@ export default function ProjectsView() {
     loadProjects();
   }, [employee]);
 
-  const fallbackProjects: ProjectAllocation[] = [
-    {
-      id: "p1",
-      employeeId: "emp",
-      projectName: "Gamanext Web Application",
-      role: "Frontend Engineer",
-      startDate: "2026-01-15",
-      endDate: "2026-12-31",
-      status: "Active",
-    },
-    {
-      id: "p2",
-      employeeId: "emp",
-      projectName: "Enterprise Matrix Management App",
-      role: "Full Stack Developer",
-      startDate: "2025-06-01",
-      endDate: "2025-12-31",
-      status: "Completed",
-    },
-    {
-      id: "p3",
-      employeeId: "emp",
-      projectName: "Internal Automation & API Suite",
-      role: "System Integrator",
-      startDate: "2025-01-10",
-      endDate: "2025-05-30",
-      status: "Completed",
-    },
-  ];
-
-  const displayList = projects.length > 0 ? projects : fallbackProjects;
+  const displayList = projects;
   const activeCount = displayList.filter((p) => p.status === "Active").length;
 
   return (
@@ -119,7 +89,7 @@ export default function ProjectsView() {
             <Loader2 className="w-6 h-6 animate-spin text-[#0052cc]" />
             <span className="text-xs">Loading assignment history...</span>
           </div>
-        ) : (
+        ) : displayList.length > 0 ? (
           <div className="space-y-3">
             {displayList.map((proj, idx) => {
               const isActive = proj.status === "Active";
@@ -162,7 +132,7 @@ export default function ProjectsView() {
                       </span>
                       <div className="flex items-center space-x-1 mt-0.5 font-mono text-slate-800 font-semibold">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{proj.startDate || "2026-01-01"}</span>
+                        <span>{proj.startDate || "—"}</span>
                       </div>
                     </div>
 
@@ -179,6 +149,16 @@ export default function ProjectsView() {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-8 text-center space-y-2">
+            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <h3 className="text-xs font-bold text-slate-800">No Project Allocations</h3>
+            <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+              You have not been assigned to any project yet. Once assigned by your manager or administrator, your project details will appear here.
+            </p>
           </div>
         )}
       </div>

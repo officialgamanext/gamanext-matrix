@@ -99,12 +99,16 @@ export default function HomeView({ onNavigateTab }: HomeViewProps) {
           </h1>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-            <span className="bg-white/20 px-2 py-0.5 rounded-[8px] text-[10px] font-mono">
-              {employee?.employeeId || "GNA-001"}
-            </span>
-            <span className="bg-emerald-500/30 text-emerald-200 px-2 py-0.5 rounded-[8px] text-[10px] font-semibold">
-              {employee?.employeeRole || "Software Engineer"}
-            </span>
+            {employee?.employeeId && (
+              <span className="bg-white/20 px-2 py-0.5 rounded-[8px] text-[10px] font-mono">
+                {employee.employeeId}
+              </span>
+            )}
+            {employee?.employeeRole && (
+              <span className="bg-emerald-500/30 text-emerald-200 px-2 py-0.5 rounded-[8px] text-[10px] font-semibold">
+                {employee.employeeRole}
+              </span>
+            )}
           </div>
         </div>
       </div>
