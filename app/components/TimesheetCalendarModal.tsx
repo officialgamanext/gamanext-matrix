@@ -265,24 +265,60 @@ export default function TimesheetCalendarModal({
 
         {/* Scrollable Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
-          {/* Month Navigation */}
-          <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 p-2.5 rounded-[8px]">
+          {/* Month & Year Navigation with Quick Dropdowns */}
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 p-2.5 rounded-[8px] gap-2">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-[8px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors"
+              title="Previous Month"
+              className="p-1.5 rounded-[6px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="font-extrabold text-sm text-slate-900 tracking-tight">
-              {monthName}
-            </span>
+            {/* Quick Month & Year Dropdown Selectors */}
+            <div className="flex items-center gap-2">
+              <select
+                value={currentMonth}
+                onChange={(e) => {
+                  setCurrentDate(new Date(currentYear, parseInt(e.target.value), 1));
+                  setSelectedDay(null);
+                }}
+                aria-label="Select month"
+                className="text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-[6px] px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#0052cc] cursor-pointer shadow-xs"
+              >
+                {[
+                  "January", "February", "March", "April", "May", "June",
+                  "July", "August", "September", "October", "November", "December"
+                ].map((name, idx) => (
+                  <option key={idx} value={idx}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={currentYear}
+                onChange={(e) => {
+                  setCurrentDate(new Date(parseInt(e.target.value), currentMonth, 1));
+                  setSelectedDay(null);
+                }}
+                aria-label="Select year"
+                className="text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-[6px] px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#0052cc] cursor-pointer shadow-xs"
+              >
+                {Array.from({ length: 50 }, (_, i) => 2015 + i).map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-1.5 rounded-[8px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors"
+              title="Next Month"
+              className="p-1.5 rounded-[6px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

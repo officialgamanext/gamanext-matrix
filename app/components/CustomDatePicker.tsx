@@ -66,6 +66,11 @@ export default function CustomDatePicker({
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
+
+  // Generous Year options (1950 - 2060)
+  const startYear = 1950;
+  const endYear = 2060;
+  const yearOptions = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
   const dayHeaders = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -160,28 +165,55 @@ export default function CustomDatePicker({
 
       {/* Popover Calendar */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 bg-white border border-slate-200 rounded-[8px] shadow-xl z-50 p-3.5 w-72 animate-in fade-in slide-in-from-top-1 duration-150">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-bold text-slate-800 tracking-wide">
-              {monthNames[currentMonth]} {currentYear}
-            </h4>
-            <div className="flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                className="p-1 hover:bg-slate-100 rounded-[8px] text-slate-500 hover:text-slate-800 transition-colors"
+        <div className="absolute left-0 top-full mt-1.5 bg-white border border-slate-200 rounded-[8px] shadow-xl z-50 p-3.5 w-[300px] animate-in fade-in slide-in-from-top-1 duration-150">
+          {/* Header with Quick Month & Year Dropdown Selectors */}
+          <div className="flex items-center justify-between gap-1 pb-2 mb-2 border-b border-slate-100">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              title="Previous Month"
+              className="p-1 hover:bg-slate-100 rounded-[6px] text-slate-500 hover:text-slate-800 transition-colors shrink-0 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Quick Month & Year Dropdowns */}
+            <div className="flex items-center gap-1.5 flex-1 justify-center">
+              <select
+                value={currentMonth}
+                onChange={(e) => setViewDate(new Date(currentYear, parseInt(e.target.value), 1))}
+                aria-label="Select month"
+                className="text-xs font-semibold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-[6px] px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#0052cc] cursor-pointer"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                className="p-1 hover:bg-slate-100 rounded-[8px] text-slate-500 hover:text-slate-800 transition-colors"
+                {monthNames.map((name, idx) => (
+                  <option key={idx} value={idx}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={currentYear}
+                onChange={(e) => setViewDate(new Date(parseInt(e.target.value), currentMonth, 1))}
+                aria-label="Select year"
+                className="text-xs font-semibold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-[6px] px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#0052cc] cursor-pointer"
               >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                {yearOptions.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              title="Next Month"
+              className="p-1 hover:bg-slate-100 rounded-[6px] text-slate-500 hover:text-slate-800 transition-colors shrink-0 cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Days of Week */}
