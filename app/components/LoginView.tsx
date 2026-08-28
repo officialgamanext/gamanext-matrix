@@ -16,15 +16,17 @@ import {
   Download,
   X,
   HelpCircle,
+  ShieldAlert,
 } from "lucide-react";
 
 export default function LoginView() {
-  const { login } = useAuth();
+  const { login, lockedNotice } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [urlLocked, setUrlLocked] = useState(false);
 
   // PWA Install State
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -34,6 +36,14 @@ export default function LoginView() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   useEffect(() => {
+    // Check if redirected with ?locked=1
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("locked") === "1" || params.get("locked") === "true") {
+        setUrlLocked(true);
+      }
+    }
+
     // Check if running as installed standalone PWA
     if (
       typeof window !== "undefined" &&
@@ -137,7 +147,7 @@ export default function LoginView() {
           />
         </div>
 
-        {/* 2. Circular Graphic Illustration matching reference */}
+        {/* 2. Circular Graphic Illustration */}
         <div className="relative w-40 h-40 flex items-center justify-center my-1">
           {/* Outer glow circle */}
           <div className="absolute inset-0 bg-blue-100/60 rounded-full blur-xs" />
@@ -170,6 +180,25 @@ export default function LoginView() {
           </div>
         </div>
 
+        {/* Locked Account Warning Banner */}
+        {(urlLocked || lockedNotice) && (
+          <div className="w-full p-4 rounded-[10px] bg-red-50 border-2 border-red-200 text-red-800 text-xs shadow-sm flex items-start space-x-3 animate-in fade-in slide-in-from-top-2">
+            <div className="p-2 bg-red-100 text-red-600 rounded-full shrink-0 mt-0.5">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-red-900 text-sm">Account Locked & Access Blocked</p>
+              <p className="text-red-700 leading-relaxed">
+                {lockedNotice ||
+                  "Your employee account has been locked by the administrator. Portal access and active sessions have been revoked."}
+              </p>
+              <p className="text-[11px] text-red-600 font-medium pt-1">
+                Please contact IT Support or Admin to unlock your account.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 3. White Sign In Card */}
         <div className="w-full bg-white rounded-[8px] shadow-lg border border-slate-100 p-6 space-y-4">
           {/* Title & Subtitle */}
@@ -195,7 +224,7 @@ export default function LoginView() {
             {/* Username Input */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">
-                Username
+                Username or Work Email
               </label>
               <div className="relative flex items-center">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
@@ -203,7 +232,7 @@ export default function LoginView() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder="Enter your username or email"
                   required
                   className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-white border border-slate-200 rounded-[8px] focus:outline-none focus:ring-1 focus:ring-[#0052cc] focus:border-[#0052cc] text-slate-900 placeholder:text-slate-400"
                 />
@@ -229,7 +258,7 @@ export default function LoginView() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 text-slate-400 hover:text-slate-600 p-1"
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

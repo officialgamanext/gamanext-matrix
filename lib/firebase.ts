@@ -4,6 +4,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
   deleteDoc,
   updateDoc,
   doc,
@@ -63,6 +64,8 @@ export interface EmployeeData {
   emergencyContact2: EmergencyContact;
   jobType?: string;
   salaryStructure?: EmployeeSalaryStructure;
+  isLocked?: boolean;
+  lockedAt?: string;
   createdAt?: string;
 }
 
@@ -249,10 +252,53 @@ export async function getEmployeesFromStorage(): Promise<EmployeeData[]> {
 }
 
 export async function getEmployeeByIdFromStorage(id: string): Promise<EmployeeData | null> {
+  try {
+    if (id) {
+      // 1. Direct doc lookup
+      const docRef = doc(db, "employees", id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as EmployeeData;
+      }
+
+      // 2. Query by employeeId
+      const q = query(collection(db, "employees"), where("employeeId", "==", id));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        return { id: snap.docs[0].id, ...snap.docs[0].data() } as EmployeeData;
+      }
+    }
+  } catch (err) {
+    console.warn("Direct employee fetch failed, falling back to cache:", err);
+  }
+
   const employees = await getEmployeesFromStorage();
   return (
     employees.find((emp) => emp.id === id || emp.employeeId === id) || null
   );
+}
+
+function sanitizeFirestoreData<T extends Record<string, any>>(data: T): T {
+  if (data === null || data === undefined) return data;
+  if (Array.isArray(data)) {
+    return data
+      .filter((item) => item !== undefined)
+      .map((item) => (typeof item === "object" && item !== null ? sanitizeFirestoreData(item) : item)) as unknown as T;
+  }
+  if (typeof data === "object") {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        if (typeof value === "object" && value !== null) {
+          cleaned[key] = sanitizeFirestoreData(value);
+        } else {
+          cleaned[key] = value;
+        }
+      }
+    }
+    return cleaned;
+  }
+  return data;
 }
 
 export async function updateEmployeeInStorage(
@@ -261,8 +307,26 @@ export async function updateEmployeeInStorage(
 ): Promise<boolean> {
   try {
     if (id) {
-      const docRef = doc(db, "employees", id);
-      await updateDoc(docRef, updatedData);
+      const cleanPayload = sanitizeFirestoreData(updatedData);
+
+      let updatedFirestore = false;
+      try {
+        const docRef = doc(db, "employees", id);
+        await updateDoc(docRef, cleanPayload);
+        updatedFirestore = true;
+      } catch (directErr) {
+        // Direct docRef update by ID might fail if ID is employeeId string
+      }
+
+      if (!updatedFirestore) {
+        const q = query(collection(db, "employees"), where("employeeId", "==", id));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          for (const d of snap.docs) {
+            await updateDoc(d.ref, cleanPayload);
+          }
+        }
+      }
     }
   } catch (err) {
     console.error("Firestore update error:", err);

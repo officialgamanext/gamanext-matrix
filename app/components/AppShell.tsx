@@ -13,7 +13,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { employee, loading } = useAuth();
+  const { employee, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -29,12 +29,19 @@ export default function AppShell({ children }: AppShellProps) {
     activeTab = "timesheet";
   }
 
-  // Redirect to /login if unauthenticated after loading completes
+  // Redirect to /login if unauthenticated or locked after loading completes
   useEffect(() => {
-    if (!loading && !employee && pathname !== "/login") {
-      router.replace("/login");
+    if (!loading) {
+      if (!employee) {
+        if (pathname !== "/login") {
+          router.replace("/login");
+        }
+      } else if (employee.isLocked) {
+        logout();
+        router.replace("/login?locked=1");
+      }
     }
-  }, [loading, employee, pathname, router]);
+  }, [loading, employee, pathname, router, logout]);
 
   // Loading Screen while restoring session
   if (loading) {
@@ -58,7 +65,7 @@ export default function AppShell({ children }: AppShellProps) {
     );
   }
 
-  if (!employee) {
+  if (!employee || employee.isLocked) {
     return null;
   }
 
