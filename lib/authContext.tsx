@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAccountLocked, setIsAccountLocked] = useState(false);
   const [lockedNotice, setLockedNotice] = useState<string | null>(null);
 
-  // Restore authenticated session from localStorage on mount & verify lock status
+  // Restore authenticated session from localStorage on mount & verify against database
   useEffect(() => {
     async function restoreSession() {
       try {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const fresh = await getEmployeeByIdFromStorage(empKey);
               if (fresh) {
                 if (fresh.isLocked) {
-                  // If locked in database, immediately block access and revoke session
+                  // If locked in database, block access and revoke session
                   localStorage.removeItem(AUTH_STORAGE_KEY);
                   setEmployee(null);
                   setIsAccountLocked(true);
@@ -61,26 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fresh));
                 }
               } else {
-                if (parsed.isLocked) {
-                  localStorage.removeItem(AUTH_STORAGE_KEY);
-                  setEmployee(null);
-                  setIsAccountLocked(true);
-                  setLockedNotice(
-                    "Your account is locked and access is blocked."
-                  );
-                } else {
-                  setEmployee(parsed);
-                }
-              }
-            } else {
-              if (parsed.isLocked) {
+                // EMPLOYEE RECORD DOES NOT EXIST (deleted from database) -> revoke session immediately!
+                console.warn("[Matrix App] Employee record no longer exists in database. Clearing session.");
                 localStorage.removeItem(AUTH_STORAGE_KEY);
                 setEmployee(null);
-                setIsAccountLocked(true);
-                setLockedNotice("Your account is locked.");
-              } else {
-                setEmployee(parsed);
               }
+            } else {
+              localStorage.removeItem(AUTH_STORAGE_KEY);
+              setEmployee(null);
             }
           }
         }
@@ -93,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restoreSession();
   }, []);
 
-  // Real-time Firestore lock & update listener on active employee
+  // Real-time Firestore listener for lock & deletion status on active employee
   useEffect(() => {
     if (!employee) return;
     const docId = employee.id;
@@ -126,6 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(freshData));
                 }
               }
+            } else {
+              // Document was deleted from database -> revoke session immediately!
+              console.warn("[Matrix App] Employee document deleted from Firestore in real-time. Revoking session.");
+              setEmployee(null);
+              if (typeof window !== "undefined") {
+                localStorage.removeItem(AUTH_STORAGE_KEY);
+                window.location.href = "/login";
+              }
             }
           },
           (err) => {
@@ -155,6 +151,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (typeof window !== "undefined") {
                   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(freshData));
                 }
+              }
+            } else {
+              // Employee deleted from Firestore
+              console.warn("[Matrix App] Employee record deleted from Firestore in real-time query. Revoking session.");
+              setEmployee(null);
+              if (typeof window !== "undefined") {
+                localStorage.removeItem(AUTH_STORAGE_KEY);
+                window.location.href = "/login";
               }
             }
           },
@@ -188,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {
           success: false,
           error:
-            "No employee records found. Please ensure employee accounts are registered in GamaNext Matrix Admin.",
+            "No employee records found in database. Please ensure employee accounts are registered in GamaNext Matrix Admin.",
         };
       }
 
@@ -281,6 +285,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (typeof window !== "undefined") {
             localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fresh));
           }
+        }
+      } else {
+        // Record deleted
+        logout();
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
         }
       }
     }

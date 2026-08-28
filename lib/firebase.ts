@@ -227,28 +227,24 @@ export async function getEmployeesFromStorage(): Promise<EmployeeData[]> {
     snapshot.forEach((docSnap) => {
       employees.push({ id: docSnap.id, ...docSnap.data() } as EmployeeData);
     });
-    if (employees.length > 0) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(LOCAL_STORAGE_KEY_EMPLOYEES, JSON.stringify(employees));
-      }
-      return employees;
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_KEY_EMPLOYEES, JSON.stringify(employees));
     }
+    return employees;
   } catch (err) {
     console.warn("Firestore fetch notice, using fallback cache:", err);
-  }
-
-  if (typeof window !== "undefined") {
-    const data = localStorage.getItem(LOCAL_STORAGE_KEY_EMPLOYEES);
-    if (data) {
-      try {
-        return JSON.parse(data);
-      } catch (e) {
-        console.error("Local storage parse error:", e);
+    if (typeof window !== "undefined") {
+      const data = localStorage.getItem(LOCAL_STORAGE_KEY_EMPLOYEES);
+      if (data) {
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          console.error("Local storage parse error:", e);
+        }
       }
     }
+    return [];
   }
-
-  return [];
 }
 
 export async function getEmployeeByIdFromStorage(id: string): Promise<EmployeeData | null> {
@@ -352,6 +348,9 @@ export async function getDepartmentsFromStorage(): Promise<DepartmentItem[]> {
     snapshot.forEach((docSnap) => {
       items.push({ id: docSnap.id, ...docSnap.data() } as DepartmentItem);
     });
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_KEY_DEPTS, JSON.stringify(items));
+    }
     return items;
   } catch (err) {
     console.warn("Firestore departments fetch notice:", err);
@@ -378,6 +377,9 @@ export async function getRolesFromStorage(): Promise<RoleItem[]> {
     snapshot.forEach((docSnap) => {
       items.push({ id: docSnap.id, ...docSnap.data() } as RoleItem);
     });
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ROLES, JSON.stringify(items));
+    }
     return items;
   } catch (err) {
     console.warn("Firestore roles fetch notice:", err);
@@ -404,6 +406,9 @@ export async function getMasterProjectsFromStorage(): Promise<MasterProjectItem[
     snapshot.forEach((docSnap) => {
       items.push({ id: docSnap.id, ...docSnap.data() } as MasterProjectItem);
     });
+    if (typeof window !== "undefined") {
+      localStorage.setItem(LOCAL_STORAGE_KEY_MASTER_PROJECTS, JSON.stringify(items));
+    }
     return items;
   } catch (err) {
     console.warn("Firestore master projects fetch notice:", err);
@@ -433,7 +438,7 @@ export async function getProjectsForEmployee(employeeId: string): Promise<Projec
     snapshot.forEach((docSnap) => {
       projects.push({ id: docSnap.id, ...docSnap.data() } as ProjectAllocation);
     });
-    if (projects.length > 0) return projects;
+    return projects;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
@@ -577,7 +582,7 @@ export async function getLeavesForEmployee(employeeId: string): Promise<LeaveReq
     snapshot.forEach((docSnap) => {
       leaves.push({ id: docSnap.id, ...docSnap.data() } as LeaveRequest);
     });
-    if (leaves.length > 0) return leaves;
+    return leaves;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
@@ -630,7 +635,7 @@ export async function getWFHForEmployee(employeeId: string): Promise<WFHRequest[
     snapshot.forEach((docSnap) => {
       wfh.push({ id: docSnap.id, ...docSnap.data() } as WFHRequest);
     });
-    if (wfh.length > 0) return wfh;
+    return wfh;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
@@ -683,7 +688,7 @@ export async function getTimesheetsForEmployee(employeeId: string): Promise<Time
     snapshot.forEach((docSnap) => {
       entries.push({ id: docSnap.id, ...docSnap.data() } as TimesheetEntry);
     });
-    if (entries.length > 0) return entries;
+    return entries;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
@@ -736,7 +741,7 @@ export async function getRequestsForEmployee(employeeId: string): Promise<Employ
     snapshot.forEach((docSnap) => {
       requests.push({ id: docSnap.id, ...docSnap.data() } as EmployeeRequest);
     });
-    if (requests.length > 0) return requests;
+    return requests;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
@@ -789,7 +794,7 @@ export async function getYearlyReviewsForEmployee(employeeId: string): Promise<Y
     snapshot.forEach((docSnap) => {
       reviews.push({ id: docSnap.id, ...docSnap.data() } as YearlyReview);
     });
-    if (reviews.length > 0) return reviews;
+    return reviews;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
@@ -815,7 +820,7 @@ export async function getPerformanceBandsForEmployee(employeeId: string): Promis
     snapshot.forEach((docSnap) => {
       bands.push({ id: docSnap.id, ...docSnap.data() } as PerformanceBandRecord);
     });
-    if (bands.length > 0) return bands;
+    return bands;
   } catch (e) {}
 
   if (typeof window !== "undefined") {
