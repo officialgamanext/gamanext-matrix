@@ -56,7 +56,7 @@ export default function HomeView() {
     {
       id: "leaves",
       title: "Leaves Management",
-      path: "/reports",
+      path: "/leaves",
       icon: Calendar,
       gradient: "from-[#9E3BF7] to-[#7B20DA]",
       shadowColor: "shadow-purple-500/20",
@@ -65,7 +65,7 @@ export default function HomeView() {
     {
       id: "wfh",
       title: "Work From Home",
-      path: "/reports",
+      path: "/wfh",
       icon: Laptop,
       gradient: "from-[#00B97D] to-[#009462]",
       shadowColor: "shadow-emerald-500/20",
@@ -104,7 +104,7 @@ export default function HomeView() {
               {/* Decorative subtle pastel curved blob in top-right corner */}
               <div
                 className="absolute -top-8 -right-8 w-24 h-24 rounded-[8px] pointer-events-none transition-transform duration-300 group-hover:scale-110 opacity-70"
-                style={{ backgroundColor: item.blobColor }}
+                style={{ backgroundColor: item.blobColor, borderRadius: "120px" }}
               />
 
               {/* Icon badge (8px border radius) */}

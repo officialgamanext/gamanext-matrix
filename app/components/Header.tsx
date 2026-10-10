@@ -248,17 +248,35 @@ export default function Header() {
                   type="button"
                   onClick={() => {
                     setShowProfileDrawer(false);
-                    router.push("/reports");
+                    router.push("/leaves");
                   }}
                   className={`w-full flex items-center justify-between p-2.5 rounded-[8px] text-xs font-medium transition-all cursor-pointer ${
-                    pathname === "/reports"
+                    pathname === "/leaves"
+                      ? "bg-blue-50 text-[#0B4FBA]"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Calendar className="w-4 h-4 text-[#0052cc]" />
+                    <span>Leaves Management</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileDrawer(false);
+                    router.push("/wfh");
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-[8px] text-xs font-medium transition-all cursor-pointer ${
+                    pathname === "/wfh"
                       ? "bg-blue-50 text-[#0B4FBA]"
                       : "text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   <div className="flex items-center space-x-2.5">
                     <FileBarChart className="w-4 h-4 text-[#0052cc]" />
-                    <span>Reports (Leaves & WFH)</span>
+                    <span>Work From Home</span>
                   </div>
                 </button>
 
