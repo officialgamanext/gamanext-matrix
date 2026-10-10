@@ -106,7 +106,7 @@ export default function WfhView() {
   const pendingWfh = wfhList.filter((w) => w.status === "Pending");
 
   return (
-    <div className="max-w-md md:max-w-lg mx-auto px-4 pb-28 space-y-4 animate-in fade-in">
+    <div className="max-w-md md:max-w-lg mx-auto px-4 pb-8 space-y-4 animate-in fade-in duration-200">
       {/* Summary Card */}
       <div className="bg-white p-4 rounded-[8px] border border-slate-100 shadow-xs flex items-center justify-between">
         <div>

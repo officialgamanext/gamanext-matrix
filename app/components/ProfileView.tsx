@@ -185,23 +185,23 @@ export default function ProfileView() {
     : "—";
 
   return (
-    <div className="max-w-md md:max-w-lg mx-auto pb-28 px-4 pt-3 space-y-4 animate-in fade-in">
+    <div className="max-w-md md:max-w-lg mx-auto pb-8 px-4 pt-3 space-y-4 animate-in fade-in duration-200">
       {/* 1. Header Profile Banner matching reference image */}
-      <div className="relative overflow-hidden rounded-[8px] bg-gradient-to-r from-[#003680] via-[#0B4FBA] to-[#0A47A4] text-white p-6 shadow-sm">
+      <div className="relative overflow-hidden rounded-[8px] bg-gradient-to-r from-[#003680] via-[#0B4FBA] to-[#0A47A4] text-white p-5 shadow-xs">
         {/* Background ambient light */}
-        <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-44 h-44 rounded-[8px] bg-blue-400/20 blur-2xl pointer-events-none" />
 
-        <div className="flex flex-col items-center text-center space-y-3 relative z-10">
+        <div className="flex flex-col items-center text-center space-y-2.5 relative z-10">
           {/* Avatar Container */}
           <div className="relative">
             {employee?.profilePhotoUrl ? (
               <img
                 src={employee.profilePhotoUrl}
                 alt={fullName}
-                className="w-24 h-24 rounded-full object-cover border-3 border-white shadow-md"
+                className="w-20 h-20 rounded-[8px] object-cover border-2 border-white shadow-xs"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-amber-400 to-pink-500 text-white font-extrabold text-3xl flex items-center justify-center border-3 border-white shadow-md">
+              <div className="w-20 h-20 rounded-[8px] bg-gradient-to-tr from-amber-400 to-pink-500 text-white font-medium text-2xl flex items-center justify-center border-2 border-white shadow-xs">
                 {getInitials()}
               </div>
             )}
@@ -209,12 +209,12 @@ export default function ProfileView() {
 
           {/* Name & Role */}
           <div className="space-y-0.5">
-            <h1 className="text-xl font-extrabold text-white tracking-tight">{fullName}</h1>
+            <h1 className="text-lg font-medium text-white tracking-tight">{fullName}</h1>
             <p className="text-xs text-blue-100 font-medium">{employeeRole}</p>
           </div>
 
           {/* Email Badge Pill */}
-          <div className="inline-flex items-center space-x-1.5 bg-white/15 backdrop-blur-xs border border-white/20 px-3.5 py-1 rounded-full text-xs text-white">
+          <div className="inline-flex items-center space-x-1.5 bg-white/15 backdrop-blur-xs border border-white/20 px-3 py-1 rounded-[8px] text-xs text-white">
             <Mail className="w-3.5 h-3.5 text-blue-200" />
             <span className="font-medium">{employeeEmail}</span>
           </div>

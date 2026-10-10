@@ -9,10 +9,10 @@ export default function LoginPage() {
   const { employee, loading } = useAuth();
   const router = useRouter();
 
-  // If already authenticated, forward to /timesheet
+  // If already authenticated, forward to home screen
   useEffect(() => {
     if (!loading && employee) {
-      router.replace("/timesheet");
+      router.replace("/");
     }
   }, [employee, loading, router]);
 

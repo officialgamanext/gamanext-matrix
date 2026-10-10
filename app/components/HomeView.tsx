@@ -1,191 +1,128 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import {
-  getProjectsForEmployee,
-  getLeavesForEmployee,
-  getWFHForEmployee,
-  getTimesheetsForEmployee,
-  getRequestsForEmployee,
-  getDepartmentsFromStorage,
-  getEmployeesFromStorage,
-  EmployeeData,
-} from "@/lib/firebase";
-import {
   Clock,
+  Wallet,
+  Briefcase,
   Calendar,
   Laptop,
-  FolderKanban,
-  Award,
-  Sparkles,
-  MapPin,
-  Mail,
-  Globe,
-  ArrowRight,
-  ShieldCheck,
-  Users,
-  PartyPopper,
-  Flame,
+  User,
 } from "lucide-react";
-import { NavTab } from "./BottomNav";
 
-interface HomeViewProps {
-  onNavigateTab: (tab: NavTab) => void;
+interface MenuItem {
+  id: string;
+  title: string;
+  path: string;
+  icon: any;
+  gradient: string;
+  shadowColor: string;
+  blobColor: string;
 }
 
-export default function HomeView({ onNavigateTab }: HomeViewProps) {
+export default function HomeView() {
+  const router = useRouter();
   const { employee } = useAuth();
 
-  const [projectsCount, setProjectsCount] = useState(0);
-  const [timesheetHoursTotal, setTimesheetHoursTotal] = useState(0);
-  const [leavesCount, setLeavesCount] = useState(0);
-  const [wfhCount, setWfhCount] = useState(0);
-
-  const [allEmployees, setAllEmployees] = useState<EmployeeData[]>([]);
-
-  useEffect(() => {
-    async function loadDashboardData() {
-      if (!employee) return;
-      const empKey = employee.id || employee.employeeId;
-      try {
-        const [
-          projList,
-          leaveList,
-          wfhList,
-          tsList,
-          empList,
-        ] = await Promise.all([
-          getProjectsForEmployee(empKey),
-          getLeavesForEmployee(empKey),
-          getWFHForEmployee(empKey),
-          getTimesheetsForEmployee(empKey),
-          getEmployeesFromStorage(),
-        ]);
-
-        setProjectsCount(projList.filter((p) => p.status === "Active").length || projList.length);
-        const totalHours = tsList.reduce((acc, curr) => acc + (Number(curr.billingHours) || 0), 0);
-        setTimesheetHoursTotal(totalHours);
-        setLeavesCount(leaveList.length);
-        setWfhCount(wfhList.length);
-        setAllEmployees(empList);
-      } catch (err) {
-        console.error("Dashboard stats load error:", err);
-      }
-    }
-    loadDashboardData();
-  }, [employee]);
-
-  const todayStr = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const menuItems: MenuItem[] = [
+    {
+      id: "timesheet",
+      title: "Timesheet",
+      path: "/timesheet",
+      icon: Clock,
+      gradient: "from-[#FF633E] to-[#E54820]",
+      shadowColor: "shadow-orange-500/20",
+      blobColor: "#fff0eb",
+    },
+    {
+      id: "payroll",
+      title: "Payroll & Payslips",
+      path: "/payroll",
+      icon: Wallet,
+      gradient: "from-[#0084FF] to-[#005AD8]",
+      shadowColor: "shadow-blue-500/20",
+      blobColor: "#eaf2ff",
+    },
+    {
+      id: "projects",
+      title: "Project Allocations",
+      path: "/projects",
+      icon: Briefcase,
+      gradient: "from-[#1E88E5] to-[#1565C0]",
+      shadowColor: "shadow-blue-500/20",
+      blobColor: "#eaf4fe",
+    },
+    {
+      id: "leaves",
+      title: "Leaves Management",
+      path: "/reports",
+      icon: Calendar,
+      gradient: "from-[#9E3BF7] to-[#7B20DA]",
+      shadowColor: "shadow-purple-500/20",
+      blobColor: "#f6ecff",
+    },
+    {
+      id: "wfh",
+      title: "Work From Home",
+      path: "/reports",
+      icon: Laptop,
+      gradient: "from-[#00B97D] to-[#009462]",
+      shadowColor: "shadow-emerald-500/20",
+      blobColor: "#e6f8f1",
+    },
+    {
+      id: "profile",
+      title: "My Profile & KYC",
+      path: "/profile",
+      icon: User,
+      gradient: "from-[#0052cc] to-[#0B4FBA]",
+      shadowColor: "shadow-blue-500/20",
+      blobColor: "#edf4ff",
+    },
+  ];
 
   return (
-    <div className="space-y-5 pb-28 max-w-md md:max-w-lg mx-auto px-4 pt-4 animate-in fade-in">
-      {/* 1. Hero Employee Welcome Banner */}
-      <div className="bg-gradient-to-r from-[#003680] via-[#0B4FBA] to-[#0A47A4] rounded-[8px] p-5 text-white shadow-sm relative overflow-hidden">
-        <div className="space-y-2">
-          <div className="inline-flex items-center space-x-1.5 bg-blue-950/50 border border-blue-400/30 px-2.5 py-0.5 rounded-[8px] text-[11px] font-medium text-blue-100">
-            <Sparkles className="w-3 h-3 text-amber-300" />
-            <span>{todayStr}</span>
-          </div>
-
-          <h1 className="text-lg font-extrabold text-white">
-            Welcome, {employee?.firstName} {employee?.lastName}!
-          </h1>
-
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-            {employee?.employeeId && (
-              <span className="bg-white/20 px-2 py-0.5 rounded-[8px] text-[10px] font-mono">
-                {employee.employeeId}
-              </span>
-            )}
-            {employee?.employeeRole && (
-              <span className="bg-emerald-500/30 text-emerald-200 px-2 py-0.5 rounded-[8px] text-[10px] font-semibold">
-                {employee.employeeRole}
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="max-w-md md:max-w-xl mx-auto px-4 pt-3 pb-8 space-y-4 animate-in fade-in duration-200">
+      {/* Title matching screenshot: My Space */}
+      <div className="text-center pt-1 pb-1">
+        <h1 className="text-xl font-medium text-slate-900 tracking-tight">
+          My Space
+        </h1>
       </div>
 
-      {/* 2. Employee Metrics Overview Grid */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div
-          onClick={() => onNavigateTab("projects")}
-          className="bg-white p-3.5 rounded-[8px] border border-slate-100 shadow-xs cursor-pointer hover:border-blue-200 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Projects</span>
-            <FolderKanban className="w-4 h-4 text-[#0052cc]" />
-          </div>
-          <div className="mt-1 flex items-baseline space-x-1">
-            <span className="text-xl font-black text-slate-900">{projectsCount}</span>
-            <span className="text-[10px] text-slate-400">Allocated</span>
-          </div>
-        </div>
+      {/* 2-Column Options Grid (Maximum 8px border radius) */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
+        {menuItems.map((item) => {
+          const IconComponent = item.icon;
+          return (
+            <div
+              key={item.id}
+              onClick={() => router.push(item.path)}
+              className="relative overflow-hidden bg-white rounded-[8px] p-4.5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] group flex flex-col justify-between min-h-[140px]"
+            >
+              {/* Decorative subtle pastel curved blob in top-right corner */}
+              <div
+                className="absolute -top-8 -right-8 w-24 h-24 rounded-[8px] pointer-events-none transition-transform duration-300 group-hover:scale-110 opacity-70"
+                style={{ backgroundColor: item.blobColor }}
+              />
 
-        <div
-          onClick={() => onNavigateTab("timesheet")}
-          className="bg-white p-3.5 rounded-[8px] border border-slate-100 shadow-xs cursor-pointer hover:border-blue-200 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Timesheet</span>
-            <Clock className="w-4 h-4 text-amber-500" />
-          </div>
-          <div className="mt-1 flex items-baseline space-x-1">
-            <span className="text-xl font-black text-slate-900">{timesheetHoursTotal}</span>
-            <span className="text-[10px] text-slate-400">Hours</span>
-          </div>
-        </div>
+              {/* Icon badge (8px border radius) */}
+              <div
+                className={`w-12 h-12 rounded-[8px] bg-gradient-to-br ${item.gradient} flex items-center justify-center text-white shadow-xs ${item.shadowColor} relative z-10 transition-transform duration-200 group-hover:scale-105`}
+              >
+                <IconComponent className="w-6 h-6 text-white stroke-[2]" />
+              </div>
 
-        <div
-          onClick={() => onNavigateTab("reports")}
-          className="bg-white p-3.5 rounded-[8px] border border-slate-100 shadow-xs cursor-pointer hover:border-blue-200 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Leaves</span>
-            <Calendar className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="mt-1 flex items-baseline space-x-1">
-            <span className="text-xl font-black text-slate-900">{leavesCount}</span>
-            <span className="text-[10px] text-slate-400">Requests</span>
-          </div>
-        </div>
-
-        <div
-          onClick={() => onNavigateTab("reports")}
-          className="bg-white p-3.5 rounded-[8px] border border-slate-100 shadow-xs cursor-pointer hover:border-blue-200 transition-all"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">WFH</span>
-            <Laptop className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="mt-1 flex items-baseline space-x-1">
-            <span className="text-xl font-black text-slate-900">{wfhCount}</span>
-            <span className="text-[10px] text-slate-400">Days</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Company Overview Card */}
-      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-4 space-y-3">
-        <div className="flex items-center space-x-2">
-          <Image
-            src="/gama-next-logo-reserved.png"
-            alt="GamaNext"
-            width={110}
-            height={28}
-            className="h-6 w-auto object-contain"
-          />
-        </div>
-        <p className="text-xs text-slate-600 leading-relaxed">
-          GamaNext Software Solutions Pvt Ltd provides enterprise matrix management, cloud architectures, and digital transformation solutions.
-        </p>
+              {/* Option Title */}
+              <div className="relative z-10 mt-3.5">
+                <h3 className="text-[14px] sm:text-[15px] font-medium text-slate-800 leading-snug group-hover:text-[#0052cc] transition-colors">
+                  {item.title}
+                </h3>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

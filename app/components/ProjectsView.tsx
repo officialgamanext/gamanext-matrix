@@ -42,26 +42,36 @@ export default function ProjectsView() {
   const activeCount = displayList.filter((p) => p.status === "Active").length;
 
   return (
-    <div className="max-w-md md:max-w-lg mx-auto px-4 pt-4 pb-28 space-y-5 animate-in fade-in">
+    <div className="max-w-md md:max-w-lg mx-auto px-4 pt-3 pb-8 space-y-4 animate-in fade-in duration-200">
       {/* 1. Header Section */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-[8px] bg-[#0052cc] text-white flex items-center justify-center shadow-sm shrink-0">
-            <Briefcase className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#0052cc] via-[#0046b0] to-[#003688] text-white rounded-[8px] p-5 shadow-xs">
+        <div className="relative z-10 flex items-start justify-between">
+          <div className="space-y-1">
+            <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-[8px] bg-white/20 text-[11px] font-medium text-blue-100 backdrop-blur-xs">
+              <ShieldCheck className="w-3 h-3 text-white" />
+              <span>Assigned Projects</span>
+            </span>
+            <h2 className="text-xl font-medium text-white tracking-tight pt-1">
               Project Allocations
-            </h1>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Assigned project history (View Only)
+            </h2>
+            <p className="text-xs text-blue-200 font-medium">
+              Official client and internal project assignments
             </p>
+          </div>
+
+          <div className="w-11 h-11 rounded-[8px] bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-inner">
+            <Briefcase className="w-6 h-6 stroke-[2]" />
           </div>
         </div>
 
-        <span className="bg-blue-50 text-[#0052cc] border border-blue-100 px-3 py-1 rounded-[8px] text-xs font-bold font-mono">
-          {activeCount} Active
-        </span>
+        <div className="mt-4 pt-3.5 border-t border-white/20 flex items-center justify-between text-xs">
+          <span className="text-blue-200">
+            Active Allocations: <strong className="text-white font-medium">{activeCount}</strong>
+          </span>
+          <span className="bg-white/20 px-2.5 py-0.5 rounded-[8px] text-[10px] font-mono">
+            {employee?.employeeId}
+          </span>
+        </div>
       </div>
 
       {/* 2. Notice Banner */}

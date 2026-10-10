@@ -56,7 +56,7 @@ export default function CustomDropdown({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2.5 text-xs border rounded-[8px] bg-white flex items-center justify-between transition-all select-none ${
+        className={`w-full px-3 h-[34px] py-1.5 text-xs border rounded-[8px] bg-white flex items-center justify-between transition-all select-none ${
           isOpen
             ? "border-[#0052cc] ring-2 ring-[#0052cc]/20 shadow-xs"
             : "border-slate-200 hover:border-slate-300"

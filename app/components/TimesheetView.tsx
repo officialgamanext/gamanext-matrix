@@ -216,41 +216,45 @@ export default function TimesheetView() {
   const yearList = ["2026", "2025", "2024"];
 
   return (
-    <div className="max-w-md md:max-w-lg mx-auto px-4 pt-4 pb-28 space-y-5 animate-in fade-in">
+    <div className="max-w-md md:max-w-lg mx-auto px-4 pt-3 pb-8 space-y-4 animate-in fade-in duration-200">
       {/* 1. Header Section with Calendar Popup Action */}
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-[8px] bg-[#0052cc] text-white flex items-center justify-center shadow-sm shrink-0">
-            <Clock className="w-6 h-6 stroke-[2.5]" />
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#FF633E] via-[#F2512A] to-[#D83A14] text-white rounded-[8px] p-5 shadow-xs">
+        <div className="relative z-10 flex items-start justify-between">
+          <div className="space-y-1">
+            <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-[8px] bg-white/20 text-[11px] font-medium text-orange-100 backdrop-blur-xs">
+              <CalendarIcon className="w-3 h-3 text-white" />
+              <span>Attendance & Work Logging</span>
+            </span>
+            <h2 className="text-xl font-medium text-white tracking-tight pt-1">
+              Daily Attendance
+            </h2>
+            <p className="text-xs text-orange-100 font-medium">
+              Record and view your daily project hours and attendance log.
+            </p>
           </div>
 
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
-              Timesheet
-            </h1>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Track and log your daily work hours
-            </p>
+          <div className="w-11 h-11 rounded-[8px] bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-inner">
+            <Clock className="w-6 h-6 stroke-[2]" />
           </div>
         </div>
 
-        {/* Calendar & Analytics Popup Trigger Button */}
-        <button
-          type="button"
-          onClick={() => setIsCalendarModalOpen(true)}
-          className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0052cc] border border-blue-200 rounded-[8px] flex items-center space-x-1.5 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
-          title="Open Monthly Calendar & Analytics"
-        >
-          <CalendarIcon className="w-4 h-4 text-[#0052cc]" />
-          <span className="hidden sm:inline">Calendar</span>
-          <BarChart3 className="w-3.5 h-3.5 text-blue-600 hidden sm:inline" />
-        </button>
+        <div className="mt-4 pt-3.5 border-t border-white/20 flex items-center justify-between">
+          <span className="text-xs text-orange-100">{todayDisplayString}</span>
+          <button
+            type="button"
+            onClick={() => setIsCalendarModalOpen(true)}
+            className="px-3 py-1.5 rounded-[8px] bg-white text-orange-900 text-xs font-medium hover:bg-orange-50 transition-colors shadow-xs cursor-pointer flex items-center space-x-1.5 active:scale-95"
+          >
+            <CalendarIcon className="w-4 h-4 text-orange-600" />
+            <span>Monthly Calendar</span>
+          </button>
+        </div>
       </div>
 
       {/* 2. Mark Timesheet Card */}
-      <div className="bg-white rounded-[8px] border border-slate-100 shadow-sm p-5 space-y-4">
+      <div className="bg-white rounded-[8px] border border-slate-100 shadow-xs p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-[#0052cc] font-bold text-sm">
+          <div className="flex items-center space-x-2 text-[#FF633E] font-bold text-sm">
             <CalendarIcon className="w-4.5 h-4.5 stroke-[2.5]" />
             <span>Mark Timesheet</span>
           </div>
@@ -258,7 +262,7 @@ export default function TimesheetView() {
           <button
             type="button"
             onClick={() => setIsCalendarModalOpen(true)}
-            className="text-[11px] text-[#0052cc] hover:underline font-semibold flex items-center space-x-1 cursor-pointer"
+            className="text-[11px] text-[#FF633E] hover:underline font-semibold flex items-center space-x-1 cursor-pointer"
           >
             <span>View Month Sheet</span>
           </button>
@@ -266,13 +270,13 @@ export default function TimesheetView() {
 
         {/* Status Messages */}
         {successMsg && (
-          <div className="p-3 rounded-[8px] bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
+          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
         {errorMsg && (
-          <div className="p-3 rounded-[8px] bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center space-x-2">
+          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
             <span>{errorMsg}</span>
           </div>

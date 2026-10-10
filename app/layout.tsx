@@ -1,15 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Sora } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 import PwaRegister from "./components/PwaRegister";
-
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   themeColor: "#0052cc",
@@ -46,10 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${sora.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <head>
         <link rel="icon" href="/app-icon.png" type="image/png" />
         <link rel="shortcut icon" href="/app-icon.png" type="image/png" />
@@ -61,7 +50,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Matrix" />
         <meta name="application-name" content="Matrix" />
       </head>
-      <body className={`${sora.className} min-h-full flex flex-col bg-slate-100 text-slate-900`}>
+      <body className="min-h-full flex flex-col bg-slate-100 text-slate-900">
         <PwaRegister />
         <AuthProvider>{children}</AuthProvider>
       </body>
